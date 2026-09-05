@@ -1,0 +1,55 @@
+{
+  "settings": {
+    "token": "DELTA-a480f9e6b7ace86ab59c5507b9e4cc3f",
+    "pollingIntervalSec": 5,
+    "autoResetOnExpire": true,
+    "soundNotifications": true,
+    "theme": "dark"
+  },
+  "keys": [
+    {
+      "key": "VIP--1HZORKC",
+      "appId": 1,
+      "appName": "Proxy Android",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "VIP-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05T05:50:21.606Z",
+      "apiExpiresAt": null,
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T06:51:36.446Z",
+      "createdAt": "2026-09-05T05:50:21.606Z",
+      "updatedAt": "2026-09-05T06:51:36.446Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": "1788587421609-vs9ww",
+      "timestamp": "2026-09-05T05:50:21.609Z",
+      "event": "KEY_CREATED",
+      "details": {
+        "key": "VIP--1HZORKC",
+        "app": "Proxy Android",
+        "customDuration": "2 hour(s)",
+        "apiTier": "1 day"
+      },
+      "level": "info"
+    }
+  ]
+}

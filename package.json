@@ -1,0 +1,17 @@
+{
+  "name": "delta-keys-custom-manager",
+  "version": "1.0.0",
+  "description": "Sistema de Criação e Monitoramento de Keys Personalizadas com Expiração Automática",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["delta", "keys", "license-manager", "auto-expire"],
+  "author": "Antigravity",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

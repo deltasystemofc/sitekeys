@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delta Key Manager | Gerador e Monitor de Chaves Personalizadas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Glow background elements -->
+  <div class="glow-bg glow-primary"></div>
+  <div class="glow-bg glow-secondary"></div>
+
+  <div id="app" class="app-wrapper">
+    <!-- Navbar Header -->
+    <header class="navbar">
+      <div class="nav-container">
+        <div class="brand">
+          <div class="logo-icon">
+            <i class="fa-solid fa-key-skeleton"></i>
+          </div>
+          <div class="brand-text">
+            <div class="brand-title">DELTA <span>KEY MASTER</span></div>
+            <div class="brand-subtitle">Monitor de Tempo Personalizado & Detecção de 1º Login</div>
+          </div>
+        </div>
+
+        <div class="live-status-pill" id="realtimeStatus">
+          <span class="status-dot pulse"></span>
+          <span class="status-label">Monitorando em Tempo Real</span>
+        </div>
+
+        <div class="nav-actions">
+          <button class="btn btn-secondary btn-icon-text" id="btnOpenLogs" title="Ver Logs de Eventos">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Histórico</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text" id="btnOpenSettings" title="Configurações da API">
+            <i class="fa-solid fa-gear"></i>
+            <span>Configurações</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text" id="btnOpenImport">
+            <i class="fa-solid fa-file-import"></i>
+            <span>Importar Key</span>
+          </button>
+          <button class="btn btn-primary btn-glow" id="btnOpenGenerate">
+            <i class="fa-solid fa-plus-circle"></i>
+            <span>Gerar Key Personalizada</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+      <!-- KPI Stats Section -->
+      <section class="stats-grid">
+        <div class="stat-card" data-filter="all">
+          <div class="stat-icon-wrap icon-blue">
+            <i class="fa-solid fa-layer-group"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Total de Chaves</span>
+            <span class="stat-value" id="statTotal">0</span>
+          </div>
+          <div class="stat-bar"><div class="stat-progress bar-blue" style="width: 100%"></div></div>
+        </div>
+
+        <div class="stat-card" data-filter="pending">
+          <div class="stat-icon-wrap icon-amber">
+            <i class="fa-solid fa-hourglass-half"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Aguardando 1º Login</span>
+            <span class="stat-value text-amber" id="statPending">0</span>
+          </div>
+          <div class="stat-bar"><div class="stat-progress bar-amber" id="barPending" style="width: 0%"></div></div>
+        </div>
+
+        <div class="stat-card" data-filter="active">
+          <div class="stat-icon-wrap icon-emerald">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Em Uso (Cronômetro Ativo)</span>
+            <span class="stat-value text-emerald" id="statActive">0</span>
+          </div>
+          <div class="stat-bar"><div class="stat-progress bar-emerald" id="barActive" style="width: 0%"></div></div>
+        </div>
+
+        <div class="stat-card" data-filter="expired">
+          <div class="stat-icon-wrap icon-rose">
+            <i class="fa-solid fa-ban"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Expiradas / Finalizadas</span>
+            <span class="stat-value text-rose" id="statExpired">0</span>
+          </div>
+          <div class="stat-bar"><div class="stat-progress bar-rose" id="barExpired" style="width: 0%"></div></div>
+        </div>
+      </section>
+
+      <!-- Explanation Banner -->
+      <section class="info-banner">
+        <div class="info-banner-icon">
+          <i class="fa-solid fa-microchip"></i>
+        </div>
+        <div class="info-banner-content">
+          <h4>Como funciona a Contagem Inteligente</h4>
+          <p>
+            Você pode gerar durações personalizadas (ex: <strong>2 Horas</strong>, <strong>12 Horas</strong>, <strong>3 Dias</strong> até <strong>30 Dias</strong>). 
+            O sistema gera automaticamente o menor plano correspondente na API Delta e monitora a chave. 
+            No momento exato em que o cliente fizer o <strong>1º Login</strong> no aplicativo, o cronômetro personalizado é disparado e a chave é resetada/expirada ao completar o tempo estipulado!
+          </p>
+        </div>
+      </section>
+
+      <!-- Controls & Filter Toolbar -->
+      <section class="toolbar-card">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="searchInput" placeholder="Pesquisar por Chave, UID, IP, Aparelho ou Produto..." autocomplete="off">
+          <button id="btnClearSearch" class="btn-clear hidden" title="Limpar busca"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-item">
+            <label><i class="fa-solid fa-filter"></i> Status:</label>
+            <select id="filterStatus" class="select-styled">
+              <option value="all">Todos os Status</option>
+              <option value="pending">⏳ Aguardando 1º Login</option>
+              <option value="active">🟢 Em Uso (Ativas)</option>
+              <option value="expired">🔴 Expiradas / Concluídas</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label><i class="fa-solid fa-cube"></i> Produto:</label>
+            <select id="filterApp" class="select-styled">
+              <option value="all">Todos os Produtos</option>
+              <option value="1">Proxy Android</option>
+              <option value="2">FFH4X Android</option>
+              <option value="3">Proxy Menu / MDK</option>
+              <option value="4">HS iOS External</option>
+            </select>
+          </div>
+
+          <button id="btnRefresh" class="btn btn-secondary btn-icon" title="Atualizar dados agora">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- Keys Container -->
+      <section class="keys-section">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Chaves Monitoradas</h3>
+            <span class="badge badge-count" id="keysCountBadge">0 chave(s)</span>
+          </div>
+          <div class="view-toggle">
+            <button class="btn-toggle active" id="viewCardsBtn" title="Visualização em Cartões"><i class="fa-solid fa-grip"></i></button>
+            <button class="btn-toggle" id="viewTableBtn" title="Visualização em Tabela"><i class="fa-solid fa-list"></i></button>
+          </div>
+        </div>
+
+        <!-- Cards View -->
+        <div class="keys-grid" id="keysContainerCards">
+          <!-- Dinamicamente preenchido via JS -->
+        </div>
+
+        <!-- Table View (Hidden by default) -->
+        <div class="table-wrapper hidden" id="keysContainerTable">
+          <table class="keys-table">
+            <thead>
+              <tr>
+                <th>Chave</th>
+                <th>Produto</th>
+                <th>Duração Personalizada</th>
+                <th>Tier API</th>
+                <th>Status / Tempo Restante</th>
+                <th>Dispositivo Conectado</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="keysTableBody">
+              <!-- Dinamicamente preenchido via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state hidden" id="emptyState">
+          <div class="empty-icon">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <h3>Nenhuma chave encontrada</h3>
+          <p>Gere uma nova chave com duração personalizada ou importe uma chave existente para iniciar o monitoramento.</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" id="btnEmptyGenerate"><i class="fa-solid fa-plus"></i> Gerar Primeira Chave</button>
+            <button class="btn btn-secondary" id="btnEmptyImport"><i class="fa-solid fa-file-import"></i> Importar Existente</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-container">
+        <span>DELTA KEY MASTER &copy; 2026 - Gestor Inteligente de Licenças Personalizadas</span>
+        <span class="api-target"><i class="fa-solid fa-shield-halved"></i> Integração Oficial geradorproxy.online</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ================= MODAL: GERAR CHAVE ================= -->
+  <div class="modal-backdrop hidden" id="modalGenerate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-wand-magic-sparkles text-primary"></i>
+          <span>Gerar Chave Personalizada</span>
+        </div>
+        <button class="btn-close" id="btnCloseGenerate"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="formGenerate">
+          <!-- Escolha do Produto / App -->
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-gamepad"></i> Selecione o Produto / App</label>
+            <div class="app-select-grid">
+              <label class="app-card-radio">
+                <input type="radio" name="appId" value="1" checked>
+                <div class="app-card-content">
+                  <div class="app-icon icon-android"><i class="fa-brands fa-android"></i></div>
+                  <div class="app-details">
+                    <span class="app-name">Proxy Android</span>
+                    <span class="app-tag">App ID #1</span>
+                  </div>
+                </div>
+              </label>
+
+              <label class="app-card-radio">
+                <input type="radio" name="appId" value="2">
+                <div class="app-card-content">
+                  <div class="app-icon icon-game"><i class="fa-solid fa-crosshairs"></i></div>
+                  <div class="app-details">
+                    <span class="app-name">FFH4X Android</span>
+                    <span class="app-tag">App ID #2</span>
+                  </div>
+                </div>
+              </label>
+
+              <label class="app-card-radio">
+                <input type="radio" name="appId" value="3">
+                <div class="app-card-content">
+                  <div class="app-icon icon-shield"><i class="fa-solid fa-shield-halved"></i></div>
+                  <div class="app-details">
+                    <span class="app-name">Proxy Menu</span>
+                    <span class="app-tag">App ID #3 (MDK)</span>
+                  </div>
+                </div>
+              </label>
+
+              <label class="app-card-radio">
+                <input type="radio" name="appId" value="4">
+                <div class="app-card-content">
+                  <div class="app-icon icon-apple"><i class="fa-brands fa-apple"></i></div>
+                  <div class="app-details">
+                    <span class="app-name">HS iOS External</span>
+                    <span class="app-tag">App ID #4 (Ruanwq)</span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Unidade de Tempo: Horas vs Dias -->
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-stopwatch"></i> Tipo de Duração Personalizada</label>
+            <div class="tab-pill-group">
+              <button type="button" class="tab-pill active" id="tabUnitHour" data-unit="hour">
+                <i class="fa-solid fa-clock"></i> Horas Personalizadas (1h a 23h)
+              </button>
+              <button type="button" class="tab-pill" id="tabUnitDay" data-unit="day">
+                <i class="fa-solid fa-calendar-days"></i> Dias Personalizados (1d a 30d)
+              </button>
+            </div>
+          </div>
+
+          <!-- Presets Rápidos -->
+          <div class="form-group">
+            <label class="form-label" id="labelDurationValue">Tempo de Uso:</label>
+            
+            <!-- Quick Presets para Horas -->
+            <div class="presets-row" id="presetsHours">
+              <button type="button" class="btn-preset" data-val="1">1 Hora</button>
+              <button type="button" class="btn-preset active" data-val="2">2 Horas</button>
+              <button type="button" class="btn-preset" data-val="4">4 Horas</button>
+              <button type="button" class="btn-preset" data-val="6">6 Horas</button>
+              <button type="button" class="btn-preset" data-val="12">12 Horas</button>
+              <button type="button" class="btn-preset" data-val="18">18 Horas</button>
+            </div>
+
+            <!-- Quick Presets para Dias -->
+            <div class="presets-row hidden" id="presetsDays">
+              <button type="button" class="btn-preset" data-val="1">1 Dia</button>
+              <button type="button" class="btn-preset" data-val="2">2 Dias</button>
+              <button type="button" class="btn-preset" data-val="3">3 Dias</button>
+              <button type="button" class="btn-preset" data-val="5">5 Dias</button>
+              <button type="button" class="btn-preset" data-val="7">7 Dias</button>
+              <button type="button" class="btn-preset" data-val="15">15 Dias</button>
+              <button type="button" class="btn-preset" data-val="30">30 Dias</button>
+            </div>
+
+            <!-- Input Numérico Manual -->
+            <div class="custom-duration-input-wrap">
+              <input type="number" id="genCustomValue" class="input-styled" value="2" min="1" max="23" required>
+              <span class="input-suffix" id="genUnitSuffix">Horas</span>
+            </div>
+            <small class="form-help-text" id="genHelpText">Tempo máximo permitido por chave: 30 dias (720 horas).</small>
+          </div>
+
+          <!-- Tier Preview Box -->
+          <div class="tier-preview-box" id="tierPreviewBox">
+            <div class="tier-preview-header">
+              <i class="fa-solid fa-calculator text-cyan"></i>
+              <span>Cálculo Automático de Tier da API:</span>
+            </div>
+            <div class="tier-preview-body" id="tierPreviewText">
+              Carregando cálculo...
+            </div>
+          </div>
+
+          <!-- Quantidade e Prefixo -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="genQuantity"><i class="fa-solid fa-cubes"></i> Quantidade</label>
+              <input type="number" id="genQuantity" class="input-styled" value="1" min="1" max="20" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="genPrefix"><i class="fa-solid fa-tag"></i> Prefixo (Opcional)</label>
+              <input type="text" id="genPrefix" class="input-styled" placeholder="Ex: VIP-, TEST-">
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btnCancelGenerate">Cancelar</button>
+            <button type="submit" class="btn btn-primary btn-glow" id="btnSubmitGenerate">
+              <i class="fa-solid fa-sparkles"></i>
+              <span>Gerar Chave(s) Agora</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: SUCESSO DE GERAÇÃO ================= -->
+  <div class="modal-backdrop hidden" id="modalCreatedSuccess">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title text-emerald">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>Chave(s) Gerada(s) com Sucesso!</span>
+        </div>
+        <button class="btn-close" id="btnCloseSuccess"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="success-subtitle">Sua chave já está sendo monitorada pelo sistema. Assim que o cliente logar, o cronômetro iniciará automaticamente.</p>
+        
+        <div class="created-keys-list" id="createdKeysList">
+          <!-- Preenchido via JS -->
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCopyAllCreated"><i class="fa-solid fa-copy"></i> Copiar Todas</button>
+          <button class="btn btn-primary" id="btnOkCreated">Concluir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: IMPORTAR CHAVE ================= -->
+  <div class="modal-backdrop hidden" id="modalImport">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-import text-primary"></i>
+          <span>Importar Chave Existente</span>
+        </div>
+        <button class="btn-close" id="btnCloseImport"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="formImport">
+          <div class="form-group">
+            <label class="form-label" for="importKey"><i class="fa-solid fa-key"></i> Chave a ser Monitorada</label>
+            <input type="text" id="importKey" class="input-styled text-mono" placeholder="Ex: DELTA-XXXXXX" required>
+            <small class="form-help-text">Insira a chave gerada anteriormente na API.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-gamepad"></i> Produto / App</label>
+            <select id="importAppId" class="select-styled" required>
+              <option value="1">1 - Proxy Android</option>
+              <option value="2">2 - FFH4X Android</option>
+              <option value="3">3 - Proxy Menu / MDK</option>
+              <option value="4">4 - HS iOS External</option>
+            </select>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="importDurationValue"><i class="fa-solid fa-hourglass-start"></i> Duração Desejada</label>
+              <input type="number" id="importDurationValue" class="input-styled" value="2" min="1" max="720" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="importDurationUnit"><i class="fa-solid fa-calendar"></i> Unidade</label>
+              <select id="importDurationUnit" class="select-styled" required>
+                <option value="hour">Hora(s)</option>
+                <option value="day">Dia(s)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btnCancelImport">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitImport">
+              <i class="fa-solid fa-check"></i>
+              <span>Verificar e Iniciar Monitoramento</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: DETALHES AO VIVO DA CHAVE ================= -->
+  <div class="modal-backdrop hidden" id="modalKeyDetails">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-circle-info text-cyan"></i>
+          <span>Detalhes em Tempo Real da Chave</span>
+        </div>
+        <button class="btn-close" id="btnCloseDetails"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="keyDetailsBody">
+        <!-- Preenchido via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CONFIGURAÇÕES ================= -->
+  <div class="modal-backdrop hidden" id="modalSettings">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-gear text-primary"></i>
+          <span>Configurações do Sistema</span>
+        </div>
+        <button class="btn-close" id="btnCloseSettings"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="formSettings">
+          <div class="form-group">
+            <label class="form-label" for="settingToken"><i class="fa-solid fa-key"></i> Token da API Delta</label>
+            <input type="text" id="settingToken" class="input-styled text-mono" required>
+            <small class="form-help-text">Utilizado para autenticar requisições na geradorproxy.online</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="settingInterval"><i class="fa-solid fa-arrows-rotate"></i> Intervalo de Checagem do Monitor (segundos)</label>
+            <input type="number" id="settingInterval" class="input-styled" value="5" min="3" max="60" required>
+            <small class="form-help-text">Recomendado: 5 a 10 segundos para detecção instantânea do 1º login.</small>
+          </div>
+
+          <div class="form-group-checkbox">
+            <label class="checkbox-label">
+              <input type="checkbox" id="settingAutoReset" checked>
+              <span><strong>Auto-Resetar HWID/IP ao expirar:</strong> Executa ResetKeyAPI automaticamente ao fim do tempo personalizado.</span>
+            </label>
+          </div>
+
+          <div class="form-group-checkbox">
+            <label class="checkbox-label">
+              <input type="checkbox" id="settingSounds" checked>
+              <span><strong>Alertas Sonoros:</strong> Tocar som quando uma chave for ativada ou quando expirar.</span>
+            </label>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btnCancelSettings">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitSettings">Salvar Configurações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= DRAWER / MODAL: LOGS DE HISTÓRICO ================= -->
+  <div class="modal-backdrop hidden" id="modalLogs">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+          <span>Logs de Auditoria & Eventos do Monitor</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-danger btn-sm" id="btnClearLogs"><i class="fa-solid fa-trash"></i> Limpar Logs</button>
+          <button class="btn-close" id="btnCloseLogs"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="logs-container" id="logsContainer">
+          <!-- Preenchido via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/app.js"></script>
+</body>
+</html>
