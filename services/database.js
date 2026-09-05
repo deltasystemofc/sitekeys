@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
@@ -27,23 +28,40 @@ let db = { ...defaultData };
 let isPostgres = false;
 let pool = null;
 
-// Check PostgreSQL configuration
+// Check PostgreSQL configuration (DATABASE_URL, POSTGRES_URL or individual PG* vars)
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const hasPgVars = process.env.PGHOST && process.env.PGUSER && process.env.PGDATABASE;
 
-if (databaseUrl) {
+if (databaseUrl || hasPgVars) {
   try {
-    const isLocalhost = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
-    pool = new Pool({
-      connectionString: databaseUrl,
-      ssl: isLocalhost ? false : { rejectUnauthorized: false }
-    });
+    let poolConfig = {};
+
+    if (databaseUrl) {
+      const isInternal = databaseUrl.includes('.internal') || databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+      poolConfig = {
+        connectionString: databaseUrl,
+        ssl: isInternal ? false : { rejectUnauthorized: false }
+      };
+    } else {
+      const isInternal = process.env.PGHOST.includes('.internal') || process.env.PGHOST.includes('localhost');
+      poolConfig = {
+        host: process.env.PGHOST,
+        port: parseInt(process.env.PGPORT, 10) || 5432,
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
+        database: process.env.PGDATABASE || process.env.POSTGRES_DB,
+        ssl: isInternal ? false : { rejectUnauthorized: false }
+      };
+    }
+
+    pool = new Pool(poolConfig);
     isPostgres = true;
-    console.log('[DB] PostgreSQL detectado. Conectando ao banco de dados...');
+    console.log('[DB] Configuração do PostgreSQL detectada. Inicializando Pool...');
   } catch (err) {
     console.error('[DB] Falha ao criar Pool do PostgreSQL:', err.message);
   }
 } else {
-  console.log('[DB] Nenhuma DATABASE_URL encontrada. Utilizando armazenamento local JSON (data/db.json).');
+  console.log('[DB] Nenhuma DATABASE_URL / PGHOST encontrada. Utilizando armazenamento local JSON (data/db.json).');
 }
 
 /**
