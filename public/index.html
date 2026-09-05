@@ -80,9 +80,16 @@
           </div>
         </div>
 
-        <div class="live-status-pill" id="realtimeStatus">
-          <span class="status-dot pulse"></span>
-          <span class="status-label">Monitorando em Tempo Real</span>
+        <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <div class="live-status-pill" id="realtimeStatus">
+            <span class="status-dot pulse"></span>
+            <span class="status-label">Monitorando em Tempo Real</span>
+          </div>
+
+          <div class="live-status-pill db-status-pill" id="dbStatusPill" title="Status do Banco de Dados">
+            <i class="fa-solid fa-database text-cyan"></i>
+            <span id="dbStatusLabel">Carregando Banco...</span>
+          </div>
         </div>
 
         <div class="nav-actions">

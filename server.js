@@ -46,6 +46,14 @@ app.get('/api/events', (req, res) => {
   res.write(`event: connected\ndata: ${JSON.stringify({ status: 'connected', time: new Date().toISOString() })}\n\n`);
 });
 
+// Status da Database (Postgres vs Local)
+app.get('/api/db-status', (req, res) => {
+  res.json({
+    success: true,
+    status: db.getConnectionStatus()
+  });
+});
+
 // Resumo / Estatísticas
 app.get('/api/stats', async (req, res) => {
   try {

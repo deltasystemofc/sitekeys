@@ -153,13 +153,37 @@ async function apiFetch(url, options = {}) {
 }
 
 async function loadSettings() {
-  const res = await apiFetch('/api/settings');
+  const [res, dbRes] = await Promise.all([
+    apiFetch('/api/settings'),
+    apiFetch('/api/db-status')
+  ]);
+
   if (res.success) {
     state.settings = res.settings;
     document.getElementById('settingToken').value = res.settings.token || '';
     document.getElementById('settingInterval').value = res.settings.pollingIntervalSec || 5;
     document.getElementById('settingAutoReset').checked = !!res.settings.autoResetOnExpire;
     document.getElementById('settingSounds').checked = !!res.settings.soundNotifications;
+  }
+
+  if (dbRes.success && dbRes.status) {
+    const pill = document.getElementById('dbStatusPill');
+    const label = document.getElementById('dbStatusLabel');
+    if (pill && label) {
+      if (dbRes.status.connected) {
+        pill.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        pill.style.background = 'rgba(16, 185, 129, 0.12)';
+        label.innerHTML = '<span class="text-emerald">🐘 PostgreSQL (Nuvem)</span>';
+        pill.title = `Conectado ao PostgreSQL com ${dbRes.status.keysCount} chave(s) persistidas.`;
+      } else {
+        pill.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        pill.style.background = 'rgba(245, 158, 11, 0.12)';
+        label.innerHTML = '<span class="text-amber">📁 Banco Local (JSON)</span>';
+        pill.title = dbRes.status.hasDatabaseUrl 
+          ? `Falha ao conectar no PostgreSQL (${dbRes.status.error || 'Verifique credenciais'}). Usando fallback JSON.` 
+          : 'DATABASE_URL não configurada no Railway. Usando armazenamento local temporário.';
+      }
+    }
   }
 }
 
