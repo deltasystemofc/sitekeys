@@ -1004,6 +1004,10 @@ document.addEventListener('DOMContentLoaded', () => {
     copyToClipboard(allText);
   });
 
+  // Variáveis de Estado da Importação
+  let importValidatedKeys = [];
+  let importValidationParams = {};
+
   // Presets de Duração para Importação
   document.querySelectorAll('#presetsImportDuration .btn-preset').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1034,13 +1038,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   importTextarea?.addEventListener('input', updateImportKeyCount);
 
-  // Form Importar Chaves (Suporte a Lote)
+  // ETAPA 1: Verificar Validade das Chaves na API
   document.getElementById('formImport')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btnSubmit = document.getElementById('btnSubmitImport');
+    const btnSubmit = document.getElementById('btnSubmitValidate');
     const originalText = btnSubmit.innerHTML;
     btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando chaves...';
+    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando na API Delta...';
 
     const rawText = document.getElementById('importKeysText').value.trim();
     const appId = document.getElementById('importAppId').value;
@@ -1050,38 +1054,135 @@ document.addEventListener('DOMContentLoaded', () => {
     const keys = rawText.split(/[\r\n,;\s]+/).filter(k => k && k.trim().length > 0);
 
     if (keys.length === 0) {
-      showToast('Nenhuma chave informada para importação.', 'warning');
+      showToast('Nenhuma chave informada para validação.', 'warning');
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = originalText;
       return;
     }
 
     try {
-      const res = await apiFetch('/api/keys/import', {
+      const res = await apiFetch('/api/keys/validate', {
         method: 'POST',
-        body: JSON.stringify({ keys, appId, customValue, customUnit })
+        body: JSON.stringify({ keys })
       });
 
       if (res.success) {
-        modalImport.classList.add('hidden');
-        document.getElementById('importKeysText').value = '';
-        updateImportKeyCount();
+        importValidatedKeys = res.validKeys || [];
+        importValidationParams = { appId, customValue, customUnit };
 
-        if (res.importedCount > 0) {
-          showToast(`🎉 ${res.importedCount} chave(s) importada(s) com sucesso para monitoramento!`, 'success', 6000);
+        // Preenche o Banner de Resumo da Validação
+        const banner = document.getElementById('validationSummaryBanner');
+        banner.innerHTML = `
+          <div class="info-banner-icon ${res.validCount > 0 ? 'text-emerald' : 'text-rose'}">
+            <i class="fa-solid ${res.validCount > 0 ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i>
+          </div>
+          <div class="info-banner-content">
+            <h4>Resultado da Verificação na API</h4>
+            <p>
+              ✅ <strong>${res.validCount} Chave(s) Válida(s)</strong> prontas para monitoramento.
+              ${res.invalidCount > 0 ? `<br>❌ <span class="text-rose font-bold">${res.invalidCount} Chave(s) Inválida(s) ou não encontradas</span> (serão ignoradas).` : ''}
+            </p>
+          </div>
+        `;
+
+        // Preenche a Lista de Chaves Analisadas
+        const listContainer = document.getElementById('validationKeysList');
+        const validItemsHtml = res.validKeys.map(k => `
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); padding: 0.65rem 0.9rem; border-radius: var(--radius-md); border: 1px solid rgba(16, 185, 129, 0.3);">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <i class="fa-solid fa-check text-emerald"></i>
+              <span class="text-mono font-bold" style="color: #fff;">${k.key}</span>
+              <span class="badge-count" style="font-size: 0.72rem;">${k.product}</span>
+            </div>
+            <span class="status-badge ${k.isActivated ? 'badge-active' : 'badge-pending'}" style="font-size: 0.72rem;">
+              ${k.isActivated ? '🟢 Em Uso' : '⏳ Aguardando Login'}
+            </span>
+          </div>
+        `).join('');
+
+        const invalidItemsHtml = res.invalidKeys.map(k => `
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); padding: 0.65rem 0.9rem; border-radius: var(--radius-md); border: 1px solid rgba(244, 63, 94, 0.3);">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <i class="fa-solid fa-xmark text-rose"></i>
+              <span class="text-mono" style="color: var(--text-muted); text-decoration: line-through;">${k.key}</span>
+            </div>
+            <span class="text-rose" style="font-size: 0.75rem;">${k.reason}</span>
+          </div>
+        `).join('');
+
+        listContainer.innerHTML = validItemsHtml + invalidItemsHtml;
+
+        // Configura o Botão de Confirmação
+        const btnConfirm = document.getElementById('btnConfirmImport');
+        const btnConfirmText = document.getElementById('btnConfirmImportText');
+
+        if (res.validCount > 0) {
+          btnConfirm.disabled = false;
+          btnConfirmText.textContent = `2. Confirmar e Importar ${res.validCount} Chave(s) Válida(s)`;
+        } else {
+          btnConfirm.disabled = true;
+          btnConfirmText.textContent = 'Nenhuma Chave Válida para Importar';
         }
-        if (res.failedCount > 0) {
-          showToast(`⚠️ ${res.failedCount} chave(s) não foram encontradas na API Delta.`, 'warning', 6000);
-        }
-        loadKeys();
+
+        // Alterna para a Etapa 2
+        document.getElementById('importStep1').classList.add('hidden');
+        document.getElementById('importStep2').classList.remove('hidden');
       } else {
-        showToast(`Erro ao importar: ${res.error || 'Falha no servidor'}`, 'error');
+        showToast(`Erro na validação: ${res.error || 'Falha ao consultar API'}`, 'error');
       }
     } catch (err) {
-      showToast('Erro interno ao processar importação.', 'error');
+      showToast('Erro interno ao validar chaves.', 'error');
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = originalText;
+    }
+  });
+
+  // Botão Voltar para Etapa 1
+  document.getElementById('btnBackToStep1')?.addEventListener('click', () => {
+    document.getElementById('importStep2').classList.add('hidden');
+    document.getElementById('importStep1').classList.remove('hidden');
+  });
+
+  // ETAPA 2: Confirmar Importação das Chaves Válidas
+  document.getElementById('btnConfirmImport')?.addEventListener('click', async () => {
+    if (importValidatedKeys.length === 0) return;
+
+    const btnConfirm = document.getElementById('btnConfirmImport');
+    const originalText = btnConfirm.innerHTML;
+    btnConfirm.disabled = true;
+    btnConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Importando chaves válidas...';
+
+    const keysToImport = importValidatedKeys.map(k => k.key);
+
+    try {
+      const res = await apiFetch('/api/keys/import', {
+        method: 'POST',
+        body: JSON.stringify({
+          keys: keysToImport,
+          appId: importValidationParams.appId,
+          customValue: importValidationParams.customValue,
+          customUnit: importValidationParams.customUnit
+        })
+      });
+
+      if (res.success) {
+        document.getElementById('modalImport').classList.add('hidden');
+        document.getElementById('importStep2').classList.add('hidden');
+        document.getElementById('importStep1').classList.remove('hidden');
+        document.getElementById('importKeysText').value = '';
+        updateImportKeyCount();
+
+        showToast(`🎉 ${res.importedCount} chave(s) validada(s) e importadas com sucesso!`, 'success', 6000);
+        loadKeys();
+      } else {
+        showToast(`Erro ao finalizar importação: ${res.error}`, 'error');
+      }
+    } catch (err) {
+      showToast('Erro ao importar chaves.', 'error');
+    } finally {
+      btnConfirm.disabled = false;
+      btnConfirm.innerHTML = originalText;
     }
   });
 

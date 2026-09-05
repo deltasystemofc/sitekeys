@@ -136,7 +136,66 @@ app.post('/api/keys/generate', async (req, res) => {
       keys: result.keys
     });
 
-    res.json({ success: true, data: result });
+// Validação prévia de chaves na API antes de importar
+app.post('/api/keys/validate', async (req, res) => {
+  try {
+    const { keys, key } = req.body;
+
+    let rawList = [];
+    if (Array.isArray(keys) && keys.length > 0) {
+      rawList = keys;
+    } else if (key && typeof key === 'string') {
+      rawList = key.split(/[\r\n,;\s]+/).filter(k => k && k.trim().length > 0);
+    }
+
+    if (rawList.length === 0) {
+      return res.status(400).json({ success: false, error: 'Nenhuma chave informada para validação.' });
+    }
+
+    const uniqueKeys = [...new Set(rawList.map(k => k.trim().toUpperCase()))];
+    const validKeys = [];
+    const invalidKeys = [];
+
+    for (const keyClean of uniqueKeys) {
+      try {
+        const info = await apiService.getKeyInfo(keyClean);
+        if (info && info.status === 'success' && info.exists) {
+          const isActivated = keyWatcher.isKeyActivated(info);
+          validKeys.push({
+            key: keyClean,
+            valid: true,
+            appId: info.app_id || 1,
+            product: info.product || info.app_name || 'App Delta',
+            expiresAt: info.expires_at || 'Não Ativada',
+            uid: info.uid || 'Nenhum',
+            ip: info.ip || 'Nenhum',
+            deviceInfo: info.device_info || 'Aguardando login',
+            isActivated
+          });
+        } else {
+          invalidKeys.push({
+            key: keyClean,
+            valid: false,
+            reason: info?.message || 'Chave não existe ou é inválida na API Delta'
+          });
+        }
+      } catch (err) {
+        invalidKeys.push({
+          key: keyClean,
+          valid: false,
+          reason: err.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      total: uniqueKeys.length,
+      validCount: validKeys.length,
+      invalidCount: invalidKeys.length,
+      validKeys,
+      invalidKeys
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
