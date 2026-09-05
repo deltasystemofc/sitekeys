@@ -8,6 +8,471 @@
   },
   "keys": [
     {
+      "key": "DELTA-QRZXD-2Z1AV-6DG3G",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:52.402Z",
+      "createdAt": "2026-09-05T07:15:35.980Z",
+      "updatedAt": "2026-09-05T07:15:52.402Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-8JR0R-TXVRF-S8XZL",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:52.683Z",
+      "createdAt": "2026-09-05T07:15:35.679Z",
+      "updatedAt": "2026-09-05T07:15:52.683Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-SAWV6-A820P-TGOKE",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:52.960Z",
+      "createdAt": "2026-09-05T07:15:35.382Z",
+      "updatedAt": "2026-09-05T07:15:52.960Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-6OGGP-IVEUS-8KN1L",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:53.237Z",
+      "createdAt": "2026-09-05T07:15:35.099Z",
+      "updatedAt": "2026-09-05T07:15:53.237Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-WIVAX-6MHZG-KR211",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:53.509Z",
+      "createdAt": "2026-09-05T07:15:34.802Z",
+      "updatedAt": "2026-09-05T07:15:53.509Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-Q2ROW-T9UF3-O3H9V",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:53.785Z",
+      "createdAt": "2026-09-05T07:15:34.527Z",
+      "updatedAt": "2026-09-05T07:15:53.785Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-SB5HP-NWBJW-VCGZ7",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:54.061Z",
+      "createdAt": "2026-09-05T07:15:34.254Z",
+      "updatedAt": "2026-09-05T07:15:54.061Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-GJKH5-U9NL8-JBXLN",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:54.340Z",
+      "createdAt": "2026-09-05T07:15:33.972Z",
+      "updatedAt": "2026-09-05T07:15:54.340Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-R5CID-5G5ML-OPRRQ",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:49.653Z",
+      "createdAt": "2026-09-05T07:15:33.688Z",
+      "updatedAt": "2026-09-05T07:15:49.653Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-QE89F-ER4XN-LW0KW",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:49.923Z",
+      "createdAt": "2026-09-05T07:15:33.385Z",
+      "updatedAt": "2026-09-05T07:15:49.923Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-ZRIKA-2QXQI-CFDYR",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:50.223Z",
+      "createdAt": "2026-09-05T07:15:33.102Z",
+      "updatedAt": "2026-09-05T07:15:50.223Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-6DMY9-L8IBX-KY5XL",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:50.493Z",
+      "createdAt": "2026-09-05T07:15:32.823Z",
+      "updatedAt": "2026-09-05T07:15:50.493Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-3W6PJ-7WNI2-T9GTI",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:50.769Z",
+      "createdAt": "2026-09-05T07:15:32.543Z",
+      "updatedAt": "2026-09-05T07:15:50.769Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-DEIWB-2FV0W-EQVZP",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:51.039Z",
+      "createdAt": "2026-09-05T07:15:32.266Z",
+      "updatedAt": "2026-09-05T07:15:51.039Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-RKXTK-E8UD6-FOJGU",
+      "appId": 3,
+      "appName": "Proxy Menu / MDK API",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:03:42.574612",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:51.316Z",
+      "createdAt": "2026-09-05T07:15:31.989Z",
+      "updatedAt": "2026-09-05T07:15:51.316Z",
+      "imported": true
+    },
+    {
       "key": "VIP--1HZORKC",
       "appId": 1,
       "appName": "Proxy Android",
@@ -25,17 +490,49 @@
       "status": "pending",
       "firstUsedAt": null,
       "customExpiresAt": null,
-      "apiCreatedAt": "2026-09-05T05:50:21.606Z",
-      "apiExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 05:50:21.078872",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
       "deviceInfo": {
         "uid": null,
         "ip": null,
         "device": null
       },
       "resetsUsed": 0,
-      "lastPolledAt": "2026-09-05T07:11:43.369Z",
-      "createdAt": "2026-09-05T05:50:21.606Z",
-      "updatedAt": "2026-09-05T07:11:43.369Z"
+      "lastPolledAt": "2026-09-05T07:15:51.587Z",
+      "createdAt": "2026-09-05T07:15:31.709Z",
+      "updatedAt": "2026-09-05T07:15:51.587Z",
+      "imported": true
+    },
+    {
+      "key": "DELTA-ZTS7NSX",
+      "appId": 2,
+      "appName": "FFH4X Android",
+      "customDuration": {
+        "value": 2,
+        "unit": "hour",
+        "totalMinutes": 120,
+        "totalHours": 2
+      },
+      "apiDuration": {
+        "duration": 1,
+        "unit": "day"
+      },
+      "prefix": "DELTA-",
+      "status": "pending",
+      "firstUsedAt": null,
+      "customExpiresAt": null,
+      "apiCreatedAt": "2026-09-05 07:07:02.844684",
+      "apiExpiresAt": "Não Ativada (Primeiro login pendente)",
+      "deviceInfo": {
+        "uid": null,
+        "ip": null,
+        "device": null
+      },
+      "resetsUsed": 0,
+      "lastPolledAt": "2026-09-05T07:15:51.985Z",
+      "createdAt": "2026-09-05T07:15:31.432Z",
+      "updatedAt": "2026-09-05T07:15:51.985Z",
+      "imported": true
     }
   ],
   "logs": [

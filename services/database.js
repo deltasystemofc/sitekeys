@@ -165,22 +165,33 @@ async function init() {
         );
       }
 
-      // Carrega Keys do PostgreSQL
+      // Carrega Keys do PostgreSQL e mescla com as locais
       const keysRes = await client.query('SELECT data FROM delta_keys ORDER BY created_at DESC');
+      const pgKeysMap = new Map();
+
       if (keysRes.rows.length > 0) {
-        db.keys = keysRes.rows.map(r => r.data);
-      } else if (db.keys.length > 0) {
-        // Se o Postgres estiver vazio mas o JSON tiver chaves, migra para o Postgres
-        console.log(`[DB] Migrando ${db.keys.length} chave(s) do JSON local para o PostgreSQL...`);
-        for (const k of db.keys) {
-          await client.query(
-            `INSERT INTO delta_keys (key, app_id, app_name, status, data, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-             ON CONFLICT (key) DO UPDATE SET data = $5, updated_at = NOW()`,
-            [k.key.toUpperCase(), k.appId, k.appName, k.status, JSON.stringify(k)]
-          );
+        keysRes.rows.forEach(r => pgKeysMap.set(r.data.key.toUpperCase(), r.data));
+      }
+
+      // Adiciona qualquer chave do db.json local que ainda não esteja no PostgreSQL
+      for (const k of db.keys) {
+        if (!pgKeysMap.has(k.key.toUpperCase())) {
+          pgKeysMap.set(k.key.toUpperCase(), k);
+          try {
+            await client.query(
+              `INSERT INTO delta_keys (key, app_id, app_name, status, data, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+               ON CONFLICT (key) DO UPDATE SET data = $5, updated_at = NOW()`,
+              [k.key.toUpperCase(), k.appId, k.appName, k.status, JSON.stringify(k)]
+            );
+          } catch (insertErr) {
+            console.error('[DB] Erro ao sincronizar chave local com Postgres:', insertErr.message);
+          }
         }
       }
+
+      db.keys = Array.from(pgKeysMap.values());
+      saveLocalJsonData();
 
       // Carrega Logs do PostgreSQL
       const logsRes = await client.query('SELECT id, timestamp, event, details, level FROM delta_logs ORDER BY timestamp DESC LIMIT 500');
