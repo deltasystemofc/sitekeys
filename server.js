@@ -136,6 +136,12 @@ app.post('/api/keys/generate', async (req, res) => {
       keys: result.keys
     });
 
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Validação prévia de chaves na API antes de importar
 app.post('/api/keys/validate', async (req, res) => {
   try {
