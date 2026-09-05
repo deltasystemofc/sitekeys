@@ -459,37 +459,55 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: IMPORTAR CHAVE ================= -->
+  <!-- ================= MODAL: IMPORTAR CHAVE(S) ================= -->
   <div class="modal-backdrop hidden" id="modalImport">
-    <div class="modal-card">
+    <div class="modal-card modal-lg">
       <div class="modal-header">
         <div class="modal-title">
           <i class="fa-solid fa-file-import text-primary"></i>
-          <span>Importar Chave Existente</span>
+          <span>Importar Chaves em Lote (Lista)</span>
         </div>
         <button class="btn-close" id="btnCloseImport"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
         <form id="formImport">
           <div class="form-group">
-            <label class="form-label" for="importKey"><i class="fa-solid fa-key"></i> Chave a ser Monitorada</label>
-            <input type="text" id="importKey" class="input-styled text-mono" placeholder="Ex: DELTA-XXXXXX" required>
-            <small class="form-help-text">Insira a chave gerada anteriormente na API.</small>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+              <label class="form-label" for="importKeysText"><i class="fa-solid fa-list-check"></i> Chaves a serem Monitoradas (uma por linha ou lista)</label>
+              <span id="importCountBadge" class="badge-count" style="color: var(--cyan); border-color: rgba(6, 182, 212, 0.3);">0 chave(s) detectada(s)</span>
+            </div>
+            <textarea id="importKeysText" class="input-styled text-mono" rows="6" placeholder="Cole uma ou várias chaves aqui (uma por linha)&#10;Exemplo:&#10;DELTA-RKXTK-E8UD6-FOJGU&#10;DELTA-DEIWB-2FV0W-EQVZP&#10;DELTA-3W6PJ-7WNI2-T9GTI" required style="resize: vertical; min-height: 130px; font-size: 0.88rem; line-height: 1.6;"></textarea>
+            <small class="form-help-text">O sistema verificará cada chave na API Delta e iniciará o monitoramento automático de todas.</small>
           </div>
 
           <div class="form-group">
-            <label class="form-label"><i class="fa-solid fa-gamepad"></i> Produto / App</label>
+            <label class="form-label"><i class="fa-solid fa-gamepad"></i> Produto / App das Chaves</label>
             <select id="importAppId" class="select-styled" required>
               <option value="1">1 - Proxy Android</option>
               <option value="2">2 - FFH4X Android</option>
-              <option value="3">3 - Proxy Menu / MDK</option>
+              <option value="3" selected>3 - Proxy Menu / MDK</option>
               <option value="4">4 - HS iOS External</option>
             </select>
           </div>
 
+          <!-- Presets Rápidos de Duração para Importação -->
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-stopwatch"></i> Duração Personalizada para as Chaves Importadas</label>
+            <div class="presets-row" id="presetsImportDuration">
+              <button type="button" class="btn-preset active" data-val="2" data-unit="hour">2 Horas</button>
+              <button type="button" class="btn-preset" data-val="4" data-unit="hour">4 Horas</button>
+              <button type="button" class="btn-preset" data-val="12" data-unit="hour">12 Horas</button>
+              <button type="button" class="btn-preset" data-val="1" data-unit="day">1 Dia</button>
+              <button type="button" class="btn-preset" data-val="3" data-unit="day">3 Dias</button>
+              <button type="button" class="btn-preset" data-val="7" data-unit="day">7 Dias</button>
+              <button type="button" class="btn-preset" data-val="15" data-unit="day">15 Dias</button>
+              <button type="button" class="btn-preset" data-val="30" data-unit="day">30 Dias</button>
+            </div>
+          </div>
+
           <div class="form-row-2">
             <div class="form-group">
-              <label class="form-label" for="importDurationValue"><i class="fa-solid fa-hourglass-start"></i> Duração Desejada</label>
+              <label class="form-label" for="importDurationValue"><i class="fa-solid fa-hourglass-start"></i> Tempo de Duração</label>
               <input type="number" id="importDurationValue" class="input-styled" value="2" min="1" max="720" required>
             </div>
             <div class="form-group">
@@ -503,9 +521,9 @@
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="btnCancelImport">Cancelar</button>
-            <button type="submit" class="btn btn-primary" id="btnSubmitImport">
-              <i class="fa-solid fa-check"></i>
-              <span>Verificar e Iniciar Monitoramento</span>
+            <button type="submit" class="btn btn-primary btn-glow" id="btnSubmitImport">
+              <i class="fa-solid fa-file-import"></i>
+              <span>Importar e Iniciar Monitoramento</span>
             </button>
           </div>
         </form>

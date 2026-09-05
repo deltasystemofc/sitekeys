@@ -1004,35 +1004,81 @@ document.addEventListener('DOMContentLoaded', () => {
     copyToClipboard(allText);
   });
 
-  // Form Importar Chave
-  document.getElementById('formImport').addEventListener('submit', async (e) => {
+  // Presets de Duração para Importação
+  document.querySelectorAll('#presetsImportDuration .btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#presetsImportDuration .btn-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const val = btn.getAttribute('data-val');
+      const unit = btn.getAttribute('data-unit');
+      document.getElementById('importDurationValue').value = val;
+      document.getElementById('importDurationUnit').value = unit;
+    });
+  });
+
+  // Contador de Chaves no Textarea de Importação
+  const importTextarea = document.getElementById('importKeysText');
+  const importCountBadge = document.getElementById('importCountBadge');
+
+  function updateImportKeyCount() {
+    if (!importTextarea || !importCountBadge) return;
+    const raw = importTextarea.value.trim();
+    if (!raw) {
+      importCountBadge.textContent = '0 chave(s) detectada(s)';
+      return;
+    }
+    const keys = raw.split(/[\r\n,;\s]+/).filter(k => k && k.trim().length > 0);
+    const unique = [...new Set(keys.map(k => k.trim().toUpperCase()))];
+    importCountBadge.textContent = `${unique.length} chave(s) detectada(s)`;
+  }
+
+  importTextarea?.addEventListener('input', updateImportKeyCount);
+
+  // Form Importar Chaves (Suporte a Lote)
+  document.getElementById('formImport')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btnSubmit = document.getElementById('btnSubmitImport');
     const originalText = btnSubmit.innerHTML;
     btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando chaves...';
 
-    const key = document.getElementById('importKey').value.trim();
+    const rawText = document.getElementById('importKeysText').value.trim();
     const appId = document.getElementById('importAppId').value;
     const customValue = parseInt(document.getElementById('importDurationValue').value, 10) || 1;
     const customUnit = document.getElementById('importDurationUnit').value;
 
+    const keys = rawText.split(/[\r\n,;\s]+/).filter(k => k && k.trim().length > 0);
+
+    if (keys.length === 0) {
+      showToast('Nenhuma chave informada para importação.', 'warning');
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = originalText;
+      return;
+    }
+
     try {
       const res = await apiFetch('/api/keys/import', {
         method: 'POST',
-        body: JSON.stringify({ key, appId, customValue, customUnit })
+        body: JSON.stringify({ keys, appId, customValue, customUnit })
       });
 
       if (res.success) {
         modalImport.classList.add('hidden');
-        showToast(`Chave ${key} importada e agora está sob monitoramento!`, 'success');
-        document.getElementById('importKey').value = '';
+        document.getElementById('importKeysText').value = '';
+        updateImportKeyCount();
+
+        if (res.importedCount > 0) {
+          showToast(`🎉 ${res.importedCount} chave(s) importada(s) com sucesso para monitoramento!`, 'success', 6000);
+        }
+        if (res.failedCount > 0) {
+          showToast(`⚠️ ${res.failedCount} chave(s) não foram encontradas na API Delta.`, 'warning', 6000);
+        }
         loadKeys();
       } else {
-        showToast(`Erro ao importar: ${res.error}`, 'error');
+        showToast(`Erro ao importar: ${res.error || 'Falha no servidor'}`, 'error');
       }
     } catch (err) {
-      showToast('Erro ao importar chave.', 'error');
+      showToast('Erro interno ao processar importação.', 'error');
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = originalText;

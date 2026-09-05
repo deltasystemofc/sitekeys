@@ -142,84 +142,115 @@ app.post('/api/keys/generate', async (req, res) => {
   }
 });
 
-// Importar chave existente para monitoramento
+// Importar chave(s) para monitoramento (suporta chave única ou lista em lote)
 app.post('/api/keys/import', async (req, res) => {
   try {
-    const { key, appId, customValue, customUnit } = req.body;
+    const { key, keys, appId, customValue, customUnit } = req.body;
 
-    if (!key || !key.trim()) {
-      return res.status(400).json({ success: false, error: 'Chave não informada.' });
+    let rawList = [];
+    if (Array.isArray(keys) && keys.length > 0) {
+      rawList = keys;
+    } else if (key && typeof key === 'string') {
+      // Divide por quebras de linha, vírgulas ou espaços
+      rawList = key.split(/[\r\n,;\s]+/).filter(k => k && k.trim().length > 0);
     }
 
-    const keyClean = key.trim().toUpperCase();
-    const tier = apiService.calculateApiTier(customValue, customUnit);
-
-    // Consulta status atual na API externa
-    const info = await apiService.getKeyInfo(keyClean);
-    if (!info || info.status === 'error' || !info.exists) {
-      return res.status(400).json({
-        success: false,
-        error: info?.message || 'A chave informada não existe ou é inválida na API Delta.'
-      });
+    if (rawList.length === 0) {
+      return res.status(400).json({ success: false, error: 'Nenhuma chave informada para importação.' });
     }
 
-    const isActivated = keyWatcher.isKeyActivated(info);
+    // Normaliza e remove duplicatas
+    const uniqueKeys = [...new Set(rawList.map(k => k.trim().toUpperCase()))];
+    const val = parseInt(customValue, 10) || 1;
+    const unit = customUnit || 'hour';
+    const targetAppId = parseInt(appId, 10) || 1;
+
+    const tier = apiService.calculateApiTier(val, unit);
     const now = Date.now();
 
-    let status = 'pending';
-    let firstUsedAt = null;
-    let customExpiresAt = null;
+    const importedKeys = [];
+    const failedKeys = [];
 
-    if (isActivated) {
-      status = 'active';
-      firstUsedAt = new Date().toISOString();
-      customExpiresAt = new Date(now + tier.totalMinutes * 60 * 1000).toISOString();
+    // Processa as chaves
+    for (const keyClean of uniqueKeys) {
+      try {
+        const info = await apiService.getKeyInfo(keyClean);
+        if (!info || info.status === 'error' || !info.exists) {
+          failedKeys.push({ key: keyClean, reason: info?.message || 'Chave não existe ou inválida na API Delta' });
+          continue;
+        }
+
+        const isActivated = keyWatcher.isKeyActivated(info);
+        let status = 'pending';
+        let firstUsedAt = null;
+        let customExpiresAt = null;
+
+        if (isActivated) {
+          status = 'active';
+          firstUsedAt = new Date().toISOString();
+          customExpiresAt = new Date(now + tier.totalMinutes * 60 * 1000).toISOString();
+        }
+
+        const detectedAppId = parseInt(targetAppId || info.app_id || 1, 10);
+
+        const keyRecord = {
+          key: keyClean,
+          appId: detectedAppId,
+          appName: apiService.APP_INFO[detectedAppId]?.name || info.product || `App ${detectedAppId}`,
+          customDuration: {
+            value: val,
+            unit,
+            totalMinutes: tier.totalMinutes,
+            totalHours: tier.customHours
+          },
+          apiDuration: {
+            duration: tier.apiDuration,
+            unit: tier.apiUnit
+          },
+          prefix: '',
+          status,
+          firstUsedAt,
+          customExpiresAt,
+          apiCreatedAt: info.created_at || new Date().toISOString(),
+          apiExpiresAt: info.expires_at || null,
+          deviceInfo: {
+            uid: info.uid && !String(info.uid).includes('Nenhum') ? info.uid : null,
+            ip: info.ip && !String(info.ip).includes('Nenhum') ? info.ip : null,
+            device: info.device_info && !String(info.device_info).includes('Aguardando') ? info.device_info : null
+          },
+          resetsUsed: 0,
+          lastPolledAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          imported: true
+        };
+
+        db.addKey(keyRecord);
+        importedKeys.push(keyRecord);
+
+        db.addLog('KEY_IMPORTED', {
+          key: keyClean,
+          app: keyRecord.appName,
+          status: keyRecord.status,
+          customDuration: `${val} ${unit}(s)`
+        });
+      } catch (err) {
+        failedKeys.push({ key: keyClean, reason: err.message });
+      }
     }
 
-    const keyRecord = {
-      key: keyClean,
-      appId: parseInt(appId || info.app_id || 1, 10),
-      appName: apiService.APP_INFO[appId]?.name || info.product || `App ${appId || 1}`,
-      customDuration: {
-        value: parseInt(customValue, 10),
-        unit: customUnit,
-        totalMinutes: tier.totalMinutes,
-        totalHours: tier.customHours
-      },
-      apiDuration: {
-        duration: tier.apiDuration,
-        unit: tier.apiUnit
-      },
-      prefix: '',
-      status,
-      firstUsedAt,
-      customExpiresAt,
-      apiCreatedAt: info.created_at || new Date().toISOString(),
-      apiExpiresAt: info.expires_at || null,
-      deviceInfo: {
-        uid: info.uid && !String(info.uid).includes('Nenhum') ? info.uid : null,
-        ip: info.ip && !String(info.ip).includes('Nenhum') ? info.ip : null,
-        device: info.device_info && !String(info.device_info).includes('Aguardando') ? info.device_info : null
-      },
-      resetsUsed: 0,
-      lastPolledAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      imported: true
-    };
+    if (importedKeys.length > 0) {
+      keyWatcher.broadcast('keys_imported', { count: importedKeys.length });
+    }
 
-    db.addKey(keyRecord);
-
-    db.addLog('KEY_IMPORTED', {
-      key: keyClean,
-      app: keyRecord.appName,
-      status: keyRecord.status,
-      customDuration: `${customValue} ${customUnit}(s)`
+    res.json({
+      success: true,
+      total: uniqueKeys.length,
+      importedCount: importedKeys.length,
+      failedCount: failedKeys.length,
+      importedKeys,
+      failedKeys
     });
-
-    keyWatcher.broadcast('key_imported', { key: keyRecord });
-
-    res.json({ success: true, key: keyRecord, info });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
