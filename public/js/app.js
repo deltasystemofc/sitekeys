@@ -102,12 +102,39 @@ function showToast(message, type = 'info', duration = 3500) {
 }
 
 // ================= API CALLS =================
+function getAuthToken() {
+  return localStorage.getItem('delta_auth_token') || '';
+}
+
+function setAuthToken(token) {
+  if (token) {
+    localStorage.setItem('delta_auth_token', token);
+  } else {
+    localStorage.removeItem('delta_auth_token');
+  }
+}
+
 async function apiFetch(url, options = {}) {
   try {
+    const token = getAuthToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...(options.headers || {})
+    };
+
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options
+      ...options,
+      headers
     });
+
+    if (res.status === 401 && !url.includes('/api/auth/login')) {
+      // Token inválido ou expirado
+      setAuthToken('');
+      showLoginScreen();
+      return { success: false, error: 'Sessão expirada. Faça login novamente.', code: 'UNAUTHORIZED' };
+    }
+
     const text = await res.text();
     let data;
     try {
@@ -581,19 +608,62 @@ function updateTierPreview() {
   `;
 }
 
+// ================= AUTHENTICATION & SCREEN MANAGEMENT =================
+let sseSource = null;
+
+function showLoginScreen() {
+  if (sseSource) {
+    sseSource.close();
+    sseSource = null;
+  }
+  document.getElementById('loginScreen')?.classList.remove('hidden');
+  document.getElementById('app')?.classList.add('hidden');
+}
+
+function showDashboard(user) {
+  document.getElementById('loginScreen')?.classList.add('hidden');
+  document.getElementById('app')?.classList.remove('hidden');
+  loadSettings();
+  loadKeys();
+  initSSE();
+}
+
+async function checkAuth() {
+  const token = getAuthToken();
+  if (!token) {
+    showLoginScreen();
+    return false;
+  }
+
+  const res = await apiFetch('/api/auth/me');
+  if (res.success && res.user) {
+    showDashboard(res.user);
+    return true;
+  } else {
+    showLoginScreen();
+    return false;
+  }
+}
+
 // ================= SSE REAL-TIME LISTENER =================
 function initSSE() {
-  const evtSource = new EventSource('/api/events');
+  if (sseSource) {
+    sseSource.close();
+  }
 
-  evtSource.onmessage = (e) => {
+  const token = getAuthToken();
+  const url = token ? `/api/events?auth_token=${encodeURIComponent(token)}` : '/api/events';
+  sseSource = new EventSource(url);
+
+  sseSource.onmessage = (e) => {
     // Ping regular
   };
 
-  evtSource.addEventListener('tick', () => {
+  sseSource.addEventListener('tick', () => {
     // Sincronização periódica
   });
 
-  evtSource.addEventListener('key_activated', (e) => {
+  sseSource.addEventListener('key_activated', (e) => {
     try {
       const data = JSON.parse(e.data);
       sounds.playActivatedSound();
@@ -604,7 +674,7 @@ function initSSE() {
     }
   });
 
-  evtSource.addEventListener('key_expired', (e) => {
+  sseSource.addEventListener('key_expired', (e) => {
     try {
       const data = JSON.parse(e.data);
       sounds.playExpiredSound();
@@ -615,19 +685,19 @@ function initSSE() {
     }
   });
 
-  evtSource.addEventListener('key_created', () => {
+  sseSource.addEventListener('key_created', () => {
     loadKeys();
   });
 
-  evtSource.addEventListener('key_imported', () => {
+  sseSource.addEventListener('key_imported', () => {
     loadKeys();
   });
 
-  evtSource.addEventListener('key_deleted', () => {
+  sseSource.addEventListener('key_deleted', () => {
     loadKeys();
   });
 
-  evtSource.onerror = () => {
+  sseSource.onerror = () => {
     console.warn('SSE reconectando...');
   };
 }
@@ -679,16 +749,75 @@ async function openLogsModal() {
 
 // ================= DOM EVENT LISTENERS =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicializa dados e SSE
-  loadSettings();
-  loadKeys();
-  initSSE();
+  // Verifica autenticação inicial
+  checkAuth();
 
   // Timer loop para contagem regressiva suave a cada 1s
   setInterval(updateCountdowns, 1000);
 
-  // Recarrega estatísticas e chaves periodicamente (backup caso SSE reconecte)
-  setInterval(loadKeys, 8000);
+  // Recarrega estatísticas e chaves periodicamente (backup)
+  setInterval(() => {
+    if (getAuthToken()) {
+      loadKeys();
+    }
+  }, 8000);
+
+  // Formulário de Login
+  const formLogin = document.getElementById('formLogin');
+  const loginError = document.getElementById('loginError');
+  const loginErrorText = document.getElementById('loginErrorText');
+  const btnSubmitLogin = document.getElementById('btnSubmitLogin');
+
+  formLogin?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginError.classList.add('hidden');
+    const originalText = btnSubmitLogin.innerHTML;
+    btnSubmitLogin.disabled = true;
+    btnSubmitLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Entrando...';
+
+    const username = document.getElementById('loginUser').value.trim();
+    const password = document.getElementById('loginPass').value;
+
+    try {
+      const res = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password })
+      });
+
+      if (res.success && res.token) {
+        setAuthToken(res.token);
+        showDashboard(res.user);
+        showToast(`Bem-vindo, ${res.user?.username || 'Administrador'}!`, 'success');
+      } else {
+        loginErrorText.textContent = res.error || 'Usuário ou senha incorretos.';
+        loginError.classList.remove('hidden');
+      }
+    } catch (err) {
+      loginErrorText.textContent = 'Erro de comunicação com o servidor.';
+      loginError.classList.remove('hidden');
+    } finally {
+      btnSubmitLogin.disabled = false;
+      btnSubmitLogin.innerHTML = originalText;
+    }
+  });
+
+  // Mostrar/Ocultar Senha
+  const btnTogglePass = document.getElementById('btnTogglePass');
+  const loginPass = document.getElementById('loginPass');
+  btnTogglePass?.addEventListener('click', () => {
+    const isPass = loginPass.type === 'password';
+    loginPass.type = isPass ? 'text' : 'password';
+    btnTogglePass.innerHTML = isPass ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+  });
+
+  // Botão Sair (Logout)
+  document.getElementById('btnLogout')?.addEventListener('click', () => {
+    if (confirm('Deseja realmente sair do painel?')) {
+      setAuthToken('');
+      showLoginScreen();
+      showToast('Você saiu do sistema.', 'info');
+    }
+  });
 
   // Tabs de Unidade (Horas vs Dias)
   const tabHour = document.getElementById('tabUnitHour');

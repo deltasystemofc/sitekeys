@@ -15,7 +15,58 @@
   <div class="glow-bg glow-primary"></div>
   <div class="glow-bg glow-secondary"></div>
 
-  <div id="app" class="app-wrapper">
+  <!-- ================= TELA DE LOGIN ================= -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-icon logo-icon-lg">
+          <i class="fa-solid fa-key-skeleton"></i>
+        </div>
+        <h2 class="login-title">DELTA <span>KEY MASTER</span></h2>
+        <p class="login-subtitle">Acesso Restrito ao Painel de Controle</p>
+      </div>
+
+      <form id="formLogin" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="loginUser"><i class="fa-solid fa-user"></i> Usuário</label>
+          <input type="text" id="loginUser" class="input-styled text-mono" placeholder="Digite seu usuário" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="loginPass"><i class="fa-solid fa-lock"></i> Senha</label>
+          <div class="password-input-wrap">
+            <input type="password" id="loginPass" class="input-styled" placeholder="Digite sua senha" required>
+            <button type="button" id="btnTogglePass" class="btn-toggle-pass" title="Mostrar/Ocultar Senha">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group-checkbox">
+          <label class="checkbox-label">
+            <input type="checkbox" id="loginRemember" checked>
+            <span>Lembrar meu acesso neste navegador</span>
+          </label>
+        </div>
+
+        <div id="loginError" class="login-error-msg hidden">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span id="loginErrorText">Usuário ou senha incorretos.</span>
+        </div>
+
+        <button type="submit" id="btnSubmitLogin" class="btn btn-primary btn-glow btn-block">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Entrar no Painel</span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <span>DELTA SYSTEM &copy; 2026 - Todos os direitos reservados</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="app-wrapper hidden">
     <!-- Navbar Header -->
     <header class="navbar">
       <div class="nav-container">
@@ -49,7 +100,11 @@
           </button>
           <button class="btn btn-primary btn-glow" id="btnOpenGenerate">
             <i class="fa-solid fa-plus-circle"></i>
-            <span>Gerar Key Personalizada</span>
+            <span>Gerar Key</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text text-rose" id="btnLogout" title="Sair do Painel">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Sair</span>
           </button>
         </div>
       </div>

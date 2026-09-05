@@ -5,6 +5,7 @@ const path = require('path');
 const db = require('./services/database');
 const apiService = require('./services/apiService');
 const keyWatcher = require('./services/keyWatcher');
+const authService = require('./services/authService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,6 +13,25 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Rota de Login Público
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  const result = authService.login(username, password);
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(401).json(result);
+  }
+});
+
+// Checagem de Sessão / Token
+app.get('/api/auth/me', authService.authMiddleware, (req, res) => {
+  res.json({ success: true, user: req.user });
+});
+
+// Middleware de Proteção para todas as rotas seguintes da API
+app.use('/api', authService.authMiddleware);
 
 // SSE Endpoint para atualizações em tempo real
 app.get('/api/events', (req, res) => {
