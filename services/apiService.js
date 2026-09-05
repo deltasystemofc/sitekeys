@@ -131,14 +131,18 @@ async function createKey({ appId = 1, customValue = 1, customUnit = 'hour', quan
     quantity: qty
   };
 
+  // Sanitiza o prefixo (remove hífens no final para evitar duplicidade ex: VIP--XXXX)
   if (prefix && prefix.trim().length > 0) {
-    params.prefix = prefix.trim();
+    const cleanPrefix = prefix.trim().replace(/-+$/, '');
+    if (cleanPrefix.length > 0) {
+      params.prefix = cleanPrefix;
+    }
   }
 
   const result = await requestApi('CreateKeyAPI.php', params);
 
   if (result.status === 'error') {
-    throw new Error(result.message || 'Erro ao criar chave na API externa.');
+    throw new Error(result.message || 'Erro retornado pela API externa.');
   }
 
   // Obtém lista de chaves geradas
@@ -147,6 +151,10 @@ async function createKey({ appId = 1, customValue = 1, customUnit = 'hour', quan
     generatedKeys = result.keys;
   } else if (result.key) {
     generatedKeys = [result.key];
+  }
+
+  if (generatedKeys.length === 0) {
+    throw new Error('Nenhuma chave retornada pela API.');
   }
 
   const registeredRecords = [];
@@ -166,7 +174,7 @@ async function createKey({ appId = 1, customValue = 1, customUnit = 'hour', quan
         duration: tier.apiDuration,
         unit: tier.apiUnit
       },
-      prefix: prefix || '',
+      prefix: params.prefix || '',
       status: 'pending', // 'pending' (aguardando 1º login), 'active' (contando tempo), 'expired' (tempo esgotado), 'error'
       firstUsedAt: null,
       customExpiresAt: null,
@@ -183,14 +191,15 @@ async function createKey({ appId = 1, customValue = 1, customUnit = 'hour', quan
       updatedAt: new Date().toISOString()
     };
 
-    db.addKey(keyRecord);
+    await db.addKey(keyRecord);
     registeredRecords.push(keyRecord);
 
-    db.addLog('KEY_CREATED', {
+    await db.addLog('KEY_CREATED', {
       key: keyStr,
       app: keyRecord.appName,
       customDuration: `${customValue} ${customUnit}(s)`,
-      apiTier: `${tier.apiDuration} ${tier.apiUnit}`
+      apiTier: `${tier.apiDuration} ${tier.apiUnit}`,
+      prefix: params.prefix || 'Nenhum'
     });
   }
 

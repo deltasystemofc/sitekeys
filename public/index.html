@@ -343,8 +343,20 @@
               <input type="number" id="genQuantity" class="input-styled" value="1" min="1" max="20" required>
             </div>
             <div class="form-group">
-              <label class="form-label" for="genPrefix"><i class="fa-solid fa-tag"></i> Prefixo (Opcional)</label>
-              <input type="text" id="genPrefix" class="input-styled" placeholder="Ex: VIP-, TEST-">
+              <label class="form-label" for="genPrefix"><i class="fa-solid fa-tag"></i> Prefixo Customizado</label>
+              <input type="text" id="genPrefix" class="input-styled text-mono" placeholder="Ex: DELTA, VIP, TEST">
+            </div>
+          </div>
+
+          <!-- Presets Rápidos de Prefixo -->
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-wand-magic"></i> Presets de Prefixo:</label>
+            <div class="presets-row" id="presetsPrefixes">
+              <button type="button" class="btn-preset active" data-pfx="">Padrão (API)</button>
+              <button type="button" class="btn-preset" data-pfx="DELTA">DELTA</button>
+              <button type="button" class="btn-preset" data-pfx="VIP">VIP</button>
+              <button type="button" class="btn-preset" data-pfx="TEST">TEST</button>
+              <button type="button" class="btn-preset" data-pfx="PROXY">PROXY</button>
             </div>
           </div>
 

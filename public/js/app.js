@@ -108,11 +108,20 @@ async function apiFetch(url, options = {}) {
       headers: { 'Content-Type': 'application/json' },
       ...options
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { success: false, error: text || `Erro HTTP ${res.status}` };
+    }
+    if (!res.ok) {
+      return { success: false, error: data.error || data.message || `Erro HTTP ${res.status}` };
+    }
     return data;
   } catch (err) {
     console.error('Fetch error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err.message || 'Falha na comunicação com o servidor' };
   }
 }
 
@@ -527,30 +536,49 @@ async function openKeyDetails(keyString) {
 }
 
 // ================= TIER PREVIEW CALCULATION =================
-async function updateTierPreview() {
-  const isHour = document.getElementById('tabUnitHour').classList.contains('active');
+function calculateClientTier(customValue, customUnit) {
+  const val = parseInt(customValue, 10) || 1;
+  const totalHours = customUnit === 'hour' ? val : val * 24;
+  if (totalHours <= 24) {
+    return {
+      tierDescription: '1 Dia (Mínimo da API para durações de horas)',
+      explanation: `Duração personalizada de ${customUnit === 'hour' ? `${val} hora(s)` : `${val} dia(s)`}. Será gerada uma chave de 1 Dia na API e o cronômetro iniciará no 1º login.`
+    };
+  } else if (totalHours <= 24 * 7) {
+    return {
+      tierDescription: '7 Dias (Mínimo da API para até 1 semana)',
+      explanation: `Duração personalizada de ${val} dias (${totalHours}h). Será gerada uma chave de 7 Dias na API e expirará em ${val} dias após o 1º login.`
+    };
+  } else if (totalHours <= 24 * 30) {
+    return {
+      tierDescription: '30 Dias (Mínimo da API para até 1 mês)',
+      explanation: `Duração personalizada de ${val} dias (${totalHours}h). Será gerada uma chave de 30 Dias na API e expirará em ${val} dias após o 1º login.`
+    };
+  }
+  return {
+    tierDescription: 'Limite Excedido',
+    explanation: 'A duração máxima permitida é de 30 dias.'
+  };
+}
+
+function updateTierPreview() {
+  const tabHour = document.getElementById('tabUnitHour');
+  const isHour = tabHour ? tabHour.classList.contains('active') : true;
   const unit = isHour ? 'hour' : 'day';
   const valInput = document.getElementById('genCustomValue');
-  let val = parseInt(valInput.value, 10) || 1;
+  let val = parseInt(valInput?.value, 10) || 1;
 
   if (isHour && val > 720) val = 720;
   if (!isHour && val > 30) val = 30;
 
   const previewBox = document.getElementById('tierPreviewText');
+  if (!previewBox) return;
 
-  const res = await apiFetch('/api/keys/preview-tier', {
-    method: 'POST',
-    body: JSON.stringify({ durationValue: val, durationUnit: unit })
-  });
-
-  if (res.success) {
-    previewBox.innerHTML = `
-      <div><strong>🎯 Plano Gerado na API:</strong> <span class="text-cyan font-bold">${res.tier.tierDescription}</span></div>
-      <div style="margin-top: 0.35rem; color: #cbd5e1;">${res.tier.explanation}</div>
-    `;
-  } else {
-    previewBox.innerHTML = `<span class="text-rose">${res.error}</span>`;
-  }
+  const clientTier = calculateClientTier(val, unit);
+  previewBox.innerHTML = `
+    <div><strong>🎯 Plano Gerado na API:</strong> <span class="text-cyan font-bold">${clientTier.tierDescription}</span></div>
+    <div style="margin-top: 0.35rem; color: #cbd5e1;">${clientTier.explanation}</div>
+  `;
 }
 
 // ================= SSE REAL-TIME LISTENER =================
@@ -716,6 +744,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   genValue.addEventListener('input', () => {
     updateTierPreview();
+  });
+
+  // Presets de Prefixo
+  document.querySelectorAll('#presetsPrefixes .btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#presetsPrefixes .btn-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const pfx = btn.getAttribute('data-pfx') || '';
+      document.getElementById('genPrefix').value = pfx;
+    });
+  });
+
+  document.getElementById('genPrefix')?.addEventListener('input', (e) => {
+    const val = e.target.value.trim().toUpperCase();
+    document.querySelectorAll('#presetsPrefixes .btn-preset').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-pfx') === val);
+    });
   });
 
   // Modais Toggle
