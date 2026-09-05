@@ -310,11 +310,25 @@ app.delete('/api/logs', (req, res) => {
   }
 });
 
-// Inicia o servidor e o watcher
+// Inicia o servidor, banco e o watcher
 const HOST = '0.0.0.0';
-app.listen(PORT, HOST, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 Delta Key Manager rodando em http://${HOST}:${PORT}`);
-  console.log(`====================================================`);
-  keyWatcher.start();
-});
+
+async function startServer() {
+  try {
+    // Inicializa banco (Postgres ou Local)
+    await db.init();
+
+    app.listen(PORT, HOST, () => {
+      console.log(`====================================================`);
+      console.log(`🚀 Delta Key Manager rodando em http://${HOST}:${PORT}`);
+      console.log(`💾 Banco: ${db.isPostgres() ? 'PostgreSQL (Nuvem)' : 'Arquivo JSON Local'}`);
+      console.log(`====================================================`);
+      keyWatcher.start();
+    });
+  } catch (err) {
+    console.error('Falha crítica ao iniciar o servidor:', err);
+    process.exit(1);
+  }
+}
+
+startServer();

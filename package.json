@@ -7,11 +7,17 @@
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": ["delta", "keys", "license-manager", "auto-expire"],
+  "keywords": [
+    "delta",
+    "keys",
+    "license-manager",
+    "auto-expire"
+  ],
   "author": "Antigravity",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "pg": "^8.23.0"
   }
 }
