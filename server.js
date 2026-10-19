@@ -370,9 +370,13 @@ app.post('/api/keys/:key/expire', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Chave não encontrada no monitor.' });
     }
 
-    await keyWatcher.handleKeyExpiration(local);
-    const updated = db.getKey(keyParam);
-    res.json({ success: true, key: updated });
+    const updated = (await keyWatcher.handleKeyExpiration(local)) || db.getKey(keyParam);
+    res.json({
+      success: true,
+      key: updated,
+      apiDeleted: !!updated.apiDeleted,
+      apiDeleteError: updated.apiDeleteError || null
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

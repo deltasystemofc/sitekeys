@@ -1,7 +1,8 @@
-require('dotenv').config();
+try { require('dotenv').config(); } catch (e) {}
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
+let Pool = null;
+try { Pool = require('pg').Pool; } catch (e) {}
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -13,7 +14,7 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const defaultData = {
   settings: {
-    token: process.env.DELTA_API_TOKEN || 'DELTA-a480f9e6b7ace86ab59c5507b9e4cc3f',
+    token: process.env.DELTA_API_TOKEN || '',
     pollingIntervalSec: parseInt(process.env.POLLING_INTERVAL_SEC, 10) || 5,
     autoResetOnExpire: true,
     soundNotifications: true,
@@ -23,8 +24,41 @@ const defaultData = {
   logs: []
 };
 
+/**
+ * Carrega dados do arquivo JSON local (fallback)
+ */
+function loadLocalJsonData() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      return {
+        settings: { ...defaultData.settings, ...(parsed.settings || {}) },
+        keys: parsed.keys || [],
+        logs: parsed.logs || []
+      };
+    }
+  } catch (err) {
+    console.error('[DB] Erro ao carregar JSON local:', err);
+  }
+  return defaultData;
+}
+
+/**
+ * Salva dados no arquivo JSON local
+ */
+function saveLocalJsonData() {
+  try {
+    const tempFile = DB_FILE + '.tmp';
+    fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), 'utf8');
+    fs.renameSync(tempFile, DB_FILE);
+  } catch (err) {
+    console.error('[DB] Erro ao salvar JSON local:', err);
+  }
+}
+
 // In-memory cache for instant reads
-let db = { ...defaultData };
+let db = loadLocalJsonData();
 let isPostgresConnected = false;
 let pool = null;
 let connectionError = null;
@@ -74,39 +108,6 @@ function createPgPool() {
     console.error('[DB] Erro ao instanciar Pool do PostgreSQL:', err.message);
     connectionError = err.message;
     return null;
-  }
-}
-
-/**
- * Carrega dados do arquivo JSON local (fallback)
- */
-function loadLocalJsonData() {
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, 'utf8');
-      const parsed = JSON.parse(raw);
-      return {
-        settings: { ...defaultData.settings, ...(parsed.settings || {}) },
-        keys: parsed.keys || [],
-        logs: parsed.logs || []
-      };
-    }
-  } catch (err) {
-    console.error('[DB] Erro ao carregar JSON local:', err);
-  }
-  return defaultData;
-}
-
-/**
- * Salva dados no arquivo JSON local
- */
-function saveLocalJsonData() {
-  try {
-    const tempFile = DB_FILE + '.tmp';
-    fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), 'utf8');
-    fs.renameSync(tempFile, DB_FILE);
-  } catch (err) {
-    console.error('[DB] Erro ao salvar JSON local:', err);
   }
 }
 
@@ -253,7 +254,10 @@ module.exports = {
   }),
 
   getSettings() {
-    return db.settings;
+    return {
+      ...db.settings,
+      token: process.env.DELTA_API_TOKEN || db.settings?.token || ''
+    };
   },
 
   async updateSettings(newSettings) {

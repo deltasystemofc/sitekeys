@@ -1,18 +1,18 @@
 # 🔑 DELTA KEY MASTER - Gerenciador e Monitor de Chaves Personalizadas
 
-Sistema web completo em **Node.js (Express)** para criação e monitoramento de chaves com durações totalmente personalizadas (horas ou dias até 30 dias) utilizando a API oficial da **Delta Proxy** (`geradorproxy.online`).
+Sistema web completo em **Node.js (Express)** para criação e monitoramento de chaves com durações totalmente personalizadas (horas ou dias até 30 dias) utilizando a API oficial (`nexusproxy.shop`).
 
 ---
 
 ## ⚡ Como Funciona a Lógica
 
 1. **Seleção Flexível de Tempo**:
-   - **Horas (ex: 2h, 4h, 12h)**: Gera automaticamente **1 Dia** na API oficial da Delta (menor custo).
+   - **Horas (ex: 2h, 4h, 12h)**: Gera automaticamente **1 Dia** na API oficial (menor custo).
    - **Dias (ex: 2 a 6 dias)**: Gera automaticamente **7 Dias** na API oficial (ou 1 dia se for 1d exato).
    - **Dias (ex: 8 a 30 dias)**: Gera automaticamente **30 Dias** na API oficial.
    - **Limite Máximo**: Bloqueio de durações superiores a 30 dias.
 2. **Detecção do 1º Login**: O monitor em segundo plano detecta o momento exato em que o cliente abre o app e conecta com a chave (capturando UID e IP).
-3. **Cronômetro & Auto-Reset**: O tempo personalizado começa a contar a partir do 1º login. Ao esgotar o prazo estipulado, o sistema executa o reset de Hardware ID (`ResetKeyAPI.php`), encerra a chave e notifica você em tempo real.
+3. **Cronômetro & Exclusão Real na API**: O tempo personalizado começa a contar a partir do 1º login. Ao esgotar o prazo estipulado, o sistema executa o reset de Hardware ID (`ResetKeyAPI.php`), exclui permanentemente a chave na API do gerador (`DeleteKeyAPI.php`), encerra a chave e notifica você em tempo real.
 
 ---
 
@@ -50,7 +50,7 @@ git push -u origin main
 
 #### Configurar Variáveis de Ambiente no Railway (Opcional):
 No painel do seu serviço no Railway, vá na aba **Variables** e adicione (se desejar alterar o padrão):
-- `DELTA_API_TOKEN`: `DELTA-a480f9e6b7ace86ab59c5507b9e4cc3f`
+- `DELTA_API_TOKEN`: `seu_token_api_aqui`
 - `POLLING_INTERVAL_SEC`: `5` (intervalo de checagem em segundos)
 
 #### Gerar Domínio Público no Railway:

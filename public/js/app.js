@@ -267,6 +267,16 @@ function formatDurationText(customDuration) {
   return unit === 'hour' ? `${value} Hora(s)` : `${value} Dia(s)`;
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function createKeyCardHtml(k) {
   const durationText = formatDurationText(k.customDuration);
   const apiTierText = `${k.apiDuration?.duration || 1} ${k.apiDuration?.unit === 'day' ? 'Dia(s)' : k.apiDuration?.unit}`;
@@ -310,6 +320,21 @@ function createKeyCardHtml(k) {
     `;
   } else if (k.status === 'expired') {
     statusBadge = `<span class="status-badge badge-expired"><i class="fa-solid fa-ban"></i> Expirada / Finalizada</span>`;
+
+    let apiStatusHtml = '';
+    if (k.apiDeleted) {
+      apiStatusHtml = `
+        <div style="margin-top: 6px; padding: 4px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.12); color: #34d399; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+          <i class="fa-solid fa-circle-check"></i> Excluída no gerador ✓
+        </div>`;
+    } else {
+      const attemptsText = k.apiDeleteAttempts ? ` (${k.apiDeleteAttempts}/10)` : '';
+      apiStatusHtml = `
+        <div style="margin-top: 6px; padding: 4px 8px; border-radius: 6px; background: rgba(245, 158, 11, 0.12); color: #fbbf24; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; gap: 5px;" title="${escapeHtml(k.apiDeleteError || 'Tentando excluir no gerador')}">
+          <i class="fa-solid fa-arrows-rotate fa-spin"></i> Falha ao excluir (tentando novamente${attemptsText})
+        </div>`;
+    }
+
     timerContent = `
       <div class="card-timer-wrap">
         <div class="timer-header">
@@ -323,6 +348,7 @@ function createKeyCardHtml(k) {
           <span>Expirou em: ${formatDate(k.expiredAt || k.updatedAt)}</span>
           <span>Duração: ${durationText}</span>
         </div>
+        ${apiStatusHtml}
       </div>
     `;
   }
@@ -366,9 +392,15 @@ function createKeyCardHtml(k) {
         <button class="btn btn-secondary btn-sm" onclick="openKeyDetails('${k.key}')" title="Ver Informações da API">
           <i class="fa-solid fa-circle-info"></i> Detalhes
         </button>
-        <button class="btn btn-secondary btn-sm" onclick="resetKeyHwid('${k.key}')" title="Resetar Hardware ID e IP">
-          <i class="fa-solid fa-arrows-rotate"></i> Reset HWID
-        </button>
+        ${k.apiDeleted ? `
+          <button class="btn btn-secondary btn-sm" disabled style="opacity: 0.45; cursor: not-allowed;" title="Chave já excluída no gerador">
+            <i class="fa-solid fa-arrows-rotate"></i> Reset HWID
+          </button>
+        ` : `
+          <button class="btn btn-secondary btn-sm" onclick="resetKeyHwid('${k.key}')" title="Resetar Hardware ID e IP">
+            <i class="fa-solid fa-arrows-rotate"></i> Reset HWID
+          </button>
+        `}
         ${k.status === 'active' ? `
           <button class="btn btn-danger btn-sm" onclick="forceExpireKey('${k.key}')" title="Encerrar agora">
             <i class="fa-solid fa-stop"></i> Expirar
@@ -392,7 +424,11 @@ function createKeyTableRowHtml(k) {
   } else if (k.status === 'active') {
     statusHtml = `<span class="status-badge badge-active live-countdown-table" id="countdown-tbl-${k.key}">🟢 Em Uso</span>`;
   } else {
-    statusHtml = `<span class="status-badge badge-expired">🔴 Expirada</span>`;
+    if (k.apiDeleted) {
+      statusHtml = `<span class="status-badge badge-expired" title="Excluída no gerador"><i class="fa-solid fa-circle-check"></i> Expirada (Excluída ✓)</span>`;
+    } else {
+      statusHtml = `<span class="status-badge badge-expired" style="border-color: #f59e0b;" title="${escapeHtml(k.apiDeleteError || 'Aguardando retry de exclusão no gerador')}"><i class="fa-solid fa-clock-rotate-left"></i> Expirada (Retry API)</span>`;
+    }
   }
 
   const devInfo = k.deviceInfo?.device || k.deviceInfo?.uid || 'Aguardando';
@@ -413,8 +449,12 @@ function createKeyTableRowHtml(k) {
       <td>
         <div style="display: flex; gap: 0.35rem;">
           <button class="btn btn-secondary btn-sm" onclick="openKeyDetails('${k.key}')"><i class="fa-solid fa-eye"></i></button>
-          <button class="btn btn-secondary btn-sm" onclick="resetKeyHwid('${k.key}')"><i class="fa-solid fa-rotate"></i></button>
-          <button class="btn btn-secondary btn-sm text-rose" onclick="deleteKey('${k.key}')"><i class="fa-solid fa-trash"></i></button>
+          ${k.apiDeleted ? `
+            <button class="btn btn-secondary btn-sm" disabled style="opacity: 0.45; cursor: not-allowed;" title="Chave já excluída no gerador"><i class="fa-solid fa-rotate"></i></button>
+          ` : `
+            <button class="btn btn-secondary btn-sm" onclick="resetKeyHwid('${k.key}')" title="Resetar HWID"><i class="fa-solid fa-rotate"></i></button>
+          `}
+          <button class="btn btn-secondary btn-sm text-rose" onclick="deleteKey('${k.key}')" title="Remover do Monitor"><i class="fa-solid fa-trash"></i></button>
         </div>
       </td>
     </tr>
@@ -702,7 +742,10 @@ function initSSE() {
     try {
       const data = JSON.parse(e.data);
       sounds.playExpiredSound();
-      showToast(`⌛ Chave ${data.key?.key} atingiu a duração personalizada e foi encerrada!`, 'warning', 7000);
+      const msg = data.apiDeleted
+        ? `⌛ Chave ${data.key?.key} expirou e foi excluída no gerador!`
+        : `⌛ Chave ${data.key?.key} atingiu a duração personalizada e foi encerrada!`;
+      showToast(msg, 'warning', 7000);
       loadKeys();
     } catch (err) {
       console.error(err);
@@ -749,6 +792,9 @@ async function openLogsModal() {
     KEY_FIRST_LOGIN_DETECTED: { bg: 'rgba(16, 185, 129, 0.2)', text: '#10b981', label: '1º Login Detectado' },
     KEY_CUSTOM_TIME_EXPIRED: { bg: 'rgba(244, 63, 94, 0.2)', text: '#f43f5e', label: 'Tempo Expirado' },
     KEY_RESET_SUCCESS: { bg: 'rgba(6, 182, 212, 0.2)', text: '#06b6d4', label: 'HWID Resetado' },
+    KEY_RESET_FAILED: { bg: 'rgba(239, 68, 68, 0.2)', text: '#ef4444', label: 'Falha Reset HWID' },
+    KEY_API_DELETE_SUCCESS: { bg: 'rgba(16, 185, 129, 0.2)', text: '#10b981', label: 'Excluída da API' },
+    KEY_API_DELETE_FAILED: { bg: 'rgba(239, 68, 68, 0.2)', text: '#ef4444', label: 'Falha Exclusão API' },
     KEY_IMPORTED: { bg: 'rgba(168, 85, 247, 0.2)', text: '#c084fc', label: 'Chave Importada' },
     KEY_DELETED_FROM_MONITOR: { bg: 'rgba(100, 116, 139, 0.2)', text: '#94a3b8', label: 'Removida' }
   };

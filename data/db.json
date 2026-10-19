@@ -1,6 +1,6 @@
 {
   "settings": {
-    "token": "DELTA-a480f9e6b7ace86ab59c5507b9e4cc3f",
+    "token": "",
     "pollingIntervalSec": 5,
     "autoResetOnExpire": true,
     "soundNotifications": true,
@@ -536,6 +536,130 @@
     }
   ],
   "logs": [
+    {
+      "id": "1792446647770-zcgzz",
+      "timestamp": "2026-10-19T21:50:47.770Z",
+      "event": "KEY_CUSTOM_TIME_EXPIRED",
+      "details": {
+        "key": "DELTA-TEST-EXP-001",
+        "appName": "Proxy Menu / MDK API",
+        "duration": "1 hour(s)",
+        "autoResetPerformed": false,
+        "apiDeleted": true
+      },
+      "level": "info"
+    },
+    {
+      "id": "1792446647767-62iew",
+      "timestamp": "2026-10-19T21:50:47.767Z",
+      "event": "KEY_API_DELETE_SUCCESS",
+      "details": {
+        "key": "DELTA-TEST-EXP-001",
+        "message": "Chave não encontrada.",
+        "alreadyGone": true
+      },
+      "level": "info"
+    },
+    {
+      "id": "1792446647477-8rh5g",
+      "timestamp": "2026-10-19T21:50:47.477Z",
+      "event": "KEY_RESET_FAILED",
+      "details": {
+        "key": "DELTA-TEST-EXP-001",
+        "message": "Chave não encontrada."
+      },
+      "level": "warning"
+    },
+    {
+      "id": "1792446647182-kffjb",
+      "timestamp": "2026-10-19T21:50:47.182Z",
+      "event": "KEY_API_DELETE_SUCCESS",
+      "details": {
+        "key": "DELTA-TEST-IDEMPOTENT-XYZ",
+        "message": "Chave não encontrada.",
+        "alreadyGone": true
+      },
+      "level": "info"
+    },
+    {
+      "id": "1792446456933-svong",
+      "timestamp": "2026-10-19T21:47:36.933Z",
+      "event": "KEY_API_DELETE_SUCCESS",
+      "details": {
+        "key": "DELTA-FAIL-RETRY-001",
+        "message": "Chave não encontrada.",
+        "alreadyGone": true
+      },
+      "level": "info"
+    },
+    {
+      "id": "1792446456642-gasjv",
+      "timestamp": "2026-10-19T21:47:36.642Z",
+      "event": "KEY_CUSTOM_TIME_EXPIRED",
+      "details": {
+        "key": "DELTA-FAIL-RETRY-001",
+        "appName": "Proxy Menu / MDK API",
+        "duration": "1 hour(s)",
+        "autoResetPerformed": false,
+        "apiDeleted": false
+      },
+      "level": "info"
+    },
+    {
+      "id": "1792446456640-2rv4o",
+      "timestamp": "2026-10-19T21:47:36.640Z",
+      "event": "KEY_RESET_FAILED",
+      "details": {
+        "key": "DELTA-FAIL-RETRY-001",
+        "message": "Chave não encontrada."
+      },
+      "level": "warning"
+    },
+    {
+      "id": "1792446437176-2nmtf",
+      "timestamp": "2026-10-19T21:47:17.176Z",
+      "event": "KEY_CUSTOM_TIME_EXPIRED",
+      "details": {
+        "key": "DELTA-TEST-EXP-001",
+        "appName": "Proxy Menu / MDK API",
+        "duration": "1 hour(s)",
+        "autoResetPerformed": false,
+        "apiDeleted": true
+      },
+      "level": "info"
+    },
+    {
+      "id": "1792446437174-em7mr",
+      "timestamp": "2026-10-19T21:47:17.174Z",
+      "event": "KEY_API_DELETE_SUCCESS",
+      "details": {
+        "key": "DELTA-TEST-EXP-001",
+        "message": "Chave não encontrada.",
+        "alreadyGone": true
+      },
+      "level": "info"
+    },
+    {
+      "id": "1792446436911-but7a",
+      "timestamp": "2026-10-19T21:47:16.911Z",
+      "event": "KEY_RESET_FAILED",
+      "details": {
+        "key": "DELTA-TEST-EXP-001",
+        "message": "Chave não encontrada."
+      },
+      "level": "warning"
+    },
+    {
+      "id": "1792446436641-u4mxq",
+      "timestamp": "2026-10-19T21:47:16.641Z",
+      "event": "KEY_API_DELETE_SUCCESS",
+      "details": {
+        "key": "DELTA-TEST-IDEMPOTENT-XYZ",
+        "message": "Chave não encontrada.",
+        "alreadyGone": true
+      },
+      "level": "info"
+    },
     {
       "id": "1788587421609-vs9ww",
       "timestamp": "2026-09-05T05:50:21.609Z",

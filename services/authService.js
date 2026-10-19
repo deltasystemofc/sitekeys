@@ -1,8 +1,9 @@
+try { require('dotenv').config(); } catch (e) {}
 const crypto = require('crypto');
 
-const ADMIN_USER = process.env.ADMIN_USER || 'DELTACHEATS';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'Dt192837!';
-const SECRET_KEY = process.env.SESSION_SECRET || 'delta_secure_session_key_2026_x89!@#';
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
+const SECRET_KEY = process.env.SESSION_SECRET || 'delta_secure_session_key_secret';
 
 /**
  * Cria um token assinado (HMAC-SHA256) com tempo de expiração (7 dias)

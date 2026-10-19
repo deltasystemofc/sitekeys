@@ -1,6 +1,6 @@
 const db = require('./database');
 
-const BASE_URL = 'https://geradorproxy.online';
+const BASE_URL = process.env.API_BASE_URL || 'https://nexusproxy.shop';
 
 const APP_INFO = {
   1: { id: 1, name: 'Proxy Android', icon: 'android', badgeColor: '#3ddc84' },
@@ -265,10 +265,59 @@ async function resetKey(keyString) {
   return result;
 }
 
+/**
+ * Exclui permanentemente UMA chave na API do gerador
+ * @param {string} keyString - Código exato da chave
+ * @returns {Promise<Object>} Resposta crua da API
+ */
+async function deleteKey(keyString) {
+  const settings = db.getSettings();
+  const token = settings.token;
+
+  if (!token) {
+    throw new Error('Token da API não configurado.');
+  }
+  if (!keyString || typeof keyString !== 'string') {
+    throw new Error('Chave não informada ou em formato inválido.');
+  }
+
+  const cleanKey = keyString.trim();
+  if (!/^[A-Za-z0-9_-]+$/.test(cleanKey)) {
+    throw new Error(`Formato de chave inválido para exclusão: ${cleanKey}`);
+  }
+
+  const result = await requestApi('DeleteKeyAPI.php', {
+    key: cleanKey,
+    token
+  });
+
+  const isSuccess = result.status === 'success';
+  const isAlreadyGone = result.status === 'error' && (
+    (result.message && /não encontrada|não existe|inválida/i.test(result.message)) ||
+    result.exists === false
+  );
+
+  if (isSuccess || isAlreadyGone) {
+    db.addLog('KEY_API_DELETE_SUCCESS', {
+      key: cleanKey,
+      message: result.message || 'Chave excluída da API.',
+      alreadyGone: isAlreadyGone
+    });
+  } else {
+    db.addLog('KEY_API_DELETE_FAILED', {
+      key: cleanKey,
+      message: result.message || 'Falha ao excluir chave da API.'
+    }, 'warning');
+  }
+
+  return result;
+}
+
 module.exports = {
   APP_INFO,
   calculateApiTier,
   createKey,
   getKeyInfo,
-  resetKey
+  resetKey,
+  deleteKey
 };
