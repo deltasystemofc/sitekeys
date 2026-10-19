@@ -1,6 +1,30 @@
-try { require('dotenv').config(); } catch (e) {}
 const fs = require('fs');
 const path = require('path');
+
+// Carrega .env com dotenv ou fallback nativo sem dependências
+try {
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+} catch (e) {}
+try {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split(/\r?\n/).forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          const key = trimmed.substring(0, eqIdx).trim();
+          const val = trimmed.substring(eqIdx + 1).trim().replace(/^['"]|['"]$/g, '');
+          if (!process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+    });
+  }
+} catch (err) {}
+
 let Pool = null;
 try { Pool = require('pg').Pool; } catch (e) {}
 
@@ -12,10 +36,15 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+function cleanEnv(val) {
+  if (!val) return '';
+  return String(val).replace(/^['"]|['"]$/g, '').trim();
+}
+
 const defaultData = {
   settings: {
-    token: process.env.DELTA_API_TOKEN || '',
-    pollingIntervalSec: parseInt(process.env.POLLING_INTERVAL_SEC, 10) || 5,
+    token: cleanEnv(process.env.DELTA_API_TOKEN) || '',
+    pollingIntervalSec: parseInt(cleanEnv(process.env.POLLING_INTERVAL_SEC), 10) || 5,
     autoResetOnExpire: true,
     soundNotifications: true,
     theme: 'dark'
@@ -67,8 +96,12 @@ let connectionError = null;
  * Cria a conexão com o PostgreSQL com suporte a Railway e SSL flexível
  */
 function createPgPool() {
-  const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  const hasPgVars = process.env.PGHOST && process.env.PGUSER && process.env.PGDATABASE;
+  const databaseUrl = cleanEnv(process.env.DATABASE_URL || process.env.POSTGRES_URL);
+  const pgHost = cleanEnv(process.env.PGHOST);
+  const pgUser = cleanEnv(process.env.PGUSER);
+  const pgDb = cleanEnv(process.env.PGDATABASE);
+
+  const hasPgVars = pgHost && pgUser && pgDb;
 
   if (!databaseUrl && !hasPgVars) {
     return null;
@@ -78,29 +111,39 @@ function createPgPool() {
     let poolConfig = {};
 
     if (databaseUrl) {
-      // Se for URL completa (padrão Railway)
-      const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+      // Se for rede interna Railway (*.railway.internal) ou localhost, não usa SSL
+      const isInternalOrLocal = databaseUrl.includes('localhost') || 
+                                databaseUrl.includes('127.0.0.1') || 
+                                databaseUrl.includes('.railway.internal');
+
       poolConfig = {
         connectionString: databaseUrl,
-        ssl: isLocal ? false : { rejectUnauthorized: false },
-        connectionTimeoutMillis: 10000,
+        ssl: isInternalOrLocal ? false : { rejectUnauthorized: false },
+        connectionTimeoutMillis: 7000,
         idleTimeoutMillis: 30000,
         max: 10
       };
     } else {
-      // Se forem variáveis separadas PG*
-      const isLocal = process.env.PGHOST.includes('localhost') || process.env.PGHOST.includes('127.0.0.1');
+      const isInternalOrLocal = pgHost.includes('localhost') || 
+                                pgHost.includes('127.0.0.1') || 
+                                pgHost.includes('.railway.internal');
+
       poolConfig = {
-        host: process.env.PGHOST,
-        port: parseInt(process.env.PGPORT, 10) || 5432,
-        user: process.env.PGUSER,
-        password: process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD,
-        database: process.env.PGDATABASE || process.env.POSTGRES_DB,
-        ssl: isLocal ? false : { rejectUnauthorized: false },
-        connectionTimeoutMillis: 10000,
+        host: pgHost,
+        port: parseInt(cleanEnv(process.env.PGPORT), 10) || 5432,
+        user: pgUser,
+        password: cleanEnv(process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD),
+        database: pgDb,
+        ssl: isInternalOrLocal ? false : { rejectUnauthorized: false },
+        connectionTimeoutMillis: 7000,
         idleTimeoutMillis: 30000,
         max: 10
       };
+    }
+
+    if (!Pool) {
+      console.warn('[DB] Módulo pg não carregado, usando armazenamento local.');
+      return null;
     }
 
     return new Pool(poolConfig);
@@ -256,7 +299,7 @@ module.exports = {
   getSettings() {
     return {
       ...db.settings,
-      token: process.env.DELTA_API_TOKEN || db.settings?.token || ''
+      token: cleanEnv(process.env.DELTA_API_TOKEN) || db.settings?.token || ''
     };
   },
 

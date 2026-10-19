@@ -1,14 +1,46 @@
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+
+// Carrega .env com dotenv ou fallback nativo sem dependências
+try {
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+} catch (e) {}
+try {
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split(/\r?\n/).forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          const key = trimmed.substring(0, eqIdx).trim();
+          const val = trimmed.substring(eqIdx + 1).trim().replace(/^['"]|['"]$/g, '');
+          if (!process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+    });
+  }
+} catch (err) {}
+
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const db = require('./services/database');
 const apiService = require('./services/apiService');
 const keyWatcher = require('./services/keyWatcher');
 const authService = require('./services/authService');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+function cleanEnv(val) {
+  if (!val) return '';
+  return String(val).replace(/^['"]|['"]$/g, '').trim();
+}
+
+const rawPort = cleanEnv(process.env.PORT);
+const PORT = parseInt(rawPort, 10) || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -439,25 +471,25 @@ app.delete('/api/logs', (req, res) => {
   }
 });
 
-// Inicia o servidor, banco e o watcher
+// Inicia o servidor HTTP imediatamente para passar no Health Check do Railway
 const HOST = '0.0.0.0';
 
-async function startServer() {
-  try {
-    // Inicializa banco (Postgres ou Local)
-    await db.init();
+const server = app.listen(PORT, HOST, () => {
+  console.log(`====================================================`);
+  console.log(`🚀 Delta Key Manager rodando em http://${HOST}:${PORT}`);
+  console.log(`====================================================`);
 
-    app.listen(PORT, HOST, () => {
-      console.log(`====================================================`);
-      console.log(`🚀 Delta Key Manager rodando em http://${HOST}:${PORT}`);
-      console.log(`💾 Banco: ${db.isPostgres() ? 'PostgreSQL (Nuvem)' : 'Arquivo JSON Local'}`);
-      console.log(`====================================================`);
-      keyWatcher.start();
-    });
-  } catch (err) {
-    console.error('Falha crítica ao iniciar o servidor:', err);
-    process.exit(1);
-  }
-}
+  // Inicializa o banco de dados e o watcher de forma assíncrona sem travar o boot
+  db.init().then(() => {
+    console.log(`💾 Banco: ${db.isPostgres() ? 'PostgreSQL (Nuvem)' : 'Arquivo JSON Local'}`);
+    keyWatcher.start();
+  }).catch(err => {
+    console.error('[DB] Erro ao conectar ao banco de dados:', err.message);
+    console.log('[DB] Operando com fallback em arquivo JSON local.');
+    keyWatcher.start();
+  });
+});
 
-startServer();
+server.on('error', (err) => {
+  console.error('[Server] Erro no servidor HTTP:', err);
+});

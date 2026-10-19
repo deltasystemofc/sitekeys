@@ -1,6 +1,11 @@
 const db = require('./database');
 
-const BASE_URL = process.env.API_BASE_URL || 'https://nexusproxy.shop';
+function cleanEnv(val) {
+  if (!val) return '';
+  return String(val).replace(/^['"]|['"]$/g, '').trim();
+}
+
+const BASE_URL = cleanEnv(process.env.API_BASE_URL) || 'https://nexusproxy.shop';
 
 const APP_INFO = {
   1: { id: 1, name: 'Proxy Android', icon: 'android', badgeColor: '#3ddc84' },
