@@ -32,6 +32,13 @@ const apiService = require('./services/apiService');
 const keyWatcher = require('./services/keyWatcher');
 const authService = require('./services/authService');
 
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const app = express();
 
 function cleanEnv(val) {
@@ -44,6 +51,10 @@ const PORT = parseInt(rawPort, 10) || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Endpoint de Health Check rápido para Railway
+app.get('/health', (req, res) => res.status(200).send('OK'));
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rota de Login Público

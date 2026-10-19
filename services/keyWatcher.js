@@ -19,13 +19,19 @@ class KeyWatcher {
     console.log(`[Watcher] Iniciando monitoramento de keys a cada ${intervalMs / 1000}s`);
     
     // Executa varredura de keys que já estavam expiradas no banco antes de ligar o loop
-    this.cleanupExpiredKeysOnStartup();
+    this.cleanupExpiredKeysOnStartup().catch(err => {
+      console.error('[Watcher] Erro na varredura inicial:', err.message);
+    });
 
     // Executa a primeira checagem imediatamente
-    this.checkKeys();
+    this.checkKeys().catch(err => {
+      console.error('[Watcher] Erro na checagem inicial:', err.message);
+    });
 
     this.timer = setInterval(() => {
-      this.checkKeys();
+      this.checkKeys().catch(err => {
+        console.error('[Watcher] Erro no loop de checagem:', err.message);
+      });
     }, intervalMs);
   }
 
@@ -201,9 +207,16 @@ class KeyWatcher {
 
         // Se a chave está pendente, consulta a API para ver se o cliente logou
         if (keyRecord.status === 'pending') {
+          // Não consulta a mesma chave pendente mais de 1 vez a cada 15 segundos
+          if (keyRecord.lastPolledAt) {
+            const timeSincePoll = now - new Date(keyRecord.lastPolledAt).getTime();
+            if (timeSincePoll < 15000) continue;
+          }
+
           try {
             const info = await apiService.getKeyInfo(keyRecord.key);
             keyRecord.lastPolledAt = new Date().toISOString();
+            db.updateKey(keyRecord.key, { lastPolledAt: keyRecord.lastPolledAt });
 
             if (info && info.status === 'success' && info.exists) {
               const activated = this.isKeyActivated(info);
@@ -243,14 +256,14 @@ class KeyWatcher {
                   key: updated,
                   message: `Chave ${keyRecord.key} iniciou uso! Cronômetro iniciado.`
                 });
-              } else {
-                // Atualiza polled time
-                db.updateKey(keyRecord.key, { lastPolledAt: new Date().toISOString() });
               }
             }
           } catch (err) {
             console.error(`[Watcher] Erro ao consultar chave ${keyRecord.key}:`, err.message);
           }
+
+          // Intervalo de segurança de 100ms entre consultas de chaves pendentes
+          await new Promise(r => setTimeout(r, 100));
         }
       }
 
