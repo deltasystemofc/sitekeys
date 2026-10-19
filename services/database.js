@@ -41,6 +41,15 @@ function cleanEnv(val) {
   return String(val).replace(/^['"]|['"]$/g, '').trim();
 }
 
+function safeKeyString(val) {
+  if (!val) return '';
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'object' && val !== null) {
+    return String(val.key || val.code || val.license || val.chave || '').trim();
+  }
+  return String(val).trim();
+}
+
 const defaultData = {
   settings: {
     token: cleanEnv(process.env.DELTA_API_TOKEN) || '',
@@ -214,19 +223,23 @@ async function init() {
       const pgKeysMap = new Map();
 
       if (keysRes.rows.length > 0) {
-        keysRes.rows.forEach(r => pgKeysMap.set(r.data.key.toUpperCase(), r.data));
+        keysRes.rows.forEach(r => {
+          const kStr = safeKeyString(r.data?.key).toUpperCase();
+          if (kStr) pgKeysMap.set(kStr, r.data);
+        });
       }
 
       // Adiciona qualquer chave do db.json local que ainda não esteja no PostgreSQL
       for (const k of db.keys) {
-        if (!pgKeysMap.has(k.key.toUpperCase())) {
-          pgKeysMap.set(k.key.toUpperCase(), k);
+        const kStr = safeKeyString(k?.key).toUpperCase();
+        if (kStr && !pgKeysMap.has(kStr)) {
+          pgKeysMap.set(kStr, k);
           try {
             await client.query(
               `INSERT INTO delta_keys (key, app_id, app_name, status, data, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
                ON CONFLICT (key) DO UPDATE SET data = $5, updated_at = NOW()`,
-              [k.key.toUpperCase(), k.appId, k.appName, k.status, JSON.stringify(k)]
+              [kStr, k.appId, k.appName, k.status, JSON.stringify(k)]
             );
           } catch (insertErr) {
             console.error('[DB] Erro ao sincronizar chave local com Postgres:', insertErr.message);
@@ -327,17 +340,24 @@ module.exports = {
   },
 
   getKey(keyString) {
-    return db.keys.find(k => k.key.toUpperCase() === keyString.toUpperCase());
+    const target = safeKeyString(keyString).toUpperCase();
+    if (!target) return null;
+    return db.keys.find(k => safeKeyString(k?.key).toUpperCase() === target);
   },
 
   addKey(keyRecord) {
+    if (!keyRecord) return null;
+    const cleanKey = safeKeyString(keyRecord.key);
+    keyRecord.key = cleanKey;
+    const cleanKeyUpper = cleanKey.toUpperCase();
+
     // Sincroniza em memória imediatamente
-    db.keys = db.keys.filter(k => k.key.toUpperCase() !== keyRecord.key.toUpperCase());
+    db.keys = db.keys.filter(k => safeKeyString(k?.key).toUpperCase() !== cleanKeyUpper);
     db.keys.unshift(keyRecord);
     saveLocalJsonData();
 
     // Persiste no Postgres de forma assíncrona
-    if (isPostgresConnected && pool) {
+    if (isPostgresConnected && pool && cleanKeyUpper) {
       pool.query(
         `INSERT INTO delta_keys (key, app_id, app_name, status, data, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
@@ -348,7 +368,7 @@ module.exports = {
            data = $5,
            updated_at = NOW()`,
         [
-          keyRecord.key.toUpperCase(),
+          cleanKeyUpper,
           keyRecord.appId,
           keyRecord.appName,
           keyRecord.status,
@@ -363,7 +383,11 @@ module.exports = {
   },
 
   updateKey(keyString, updates) {
-    const idx = db.keys.findIndex(k => k.key.toUpperCase() === keyString.toUpperCase());
+    const cleanKey = safeKeyString(keyString);
+    const target = cleanKey.toUpperCase();
+    if (!target) return null;
+
+    const idx = db.keys.findIndex(k => safeKeyString(k?.key).toUpperCase() === target);
     if (idx !== -1) {
       db.keys[idx] = { ...db.keys[idx], ...updates, updatedAt: new Date().toISOString() };
       const updatedRecord = db.keys[idx];
@@ -375,7 +399,7 @@ module.exports = {
            SET status = $2, data = $3, updated_at = NOW()
            WHERE key = $1`,
           [
-            keyString.toUpperCase(),
+            target,
             updatedRecord.status,
             JSON.stringify(updatedRecord)
           ]
@@ -390,14 +414,18 @@ module.exports = {
   },
 
   removeKey(keyString) {
+    const cleanKey = safeKeyString(keyString);
+    const target = cleanKey.toUpperCase();
+    if (!target) return false;
+
     const initialLen = db.keys.length;
-    db.keys = db.keys.filter(k => k.key.toUpperCase() !== keyString.toUpperCase());
+    db.keys = db.keys.filter(k => safeKeyString(k?.key).toUpperCase() !== target);
 
     if (db.keys.length !== initialLen) {
       saveLocalJsonData();
 
       if (isPostgresConnected && pool) {
-        pool.query('DELETE FROM delta_keys WHERE key = $1', [keyString.toUpperCase()])
+        pool.query('DELETE FROM delta_keys WHERE key = $1', [target])
           .catch(err => {
             console.error('[DB Postgres] Erro ao remover chave:', err.message);
           });

@@ -150,12 +150,29 @@ async function createKey({ appId = 1, customValue = 1, customUnit = 'hour', quan
     throw new Error(result.message || 'Erro retornado pela API externa.');
   }
 
-  // Obtém lista de chaves geradas
-  let generatedKeys = [];
+  // Obtém lista de chaves geradas com segurança (suporta strings ou objetos)
+  let rawKeysList = [];
   if (Array.isArray(result.keys) && result.keys.length > 0) {
-    generatedKeys = result.keys;
+    rawKeysList = result.keys;
   } else if (result.key) {
-    generatedKeys = [result.key];
+    rawKeysList = [result.key];
+  } else if (result.data && (Array.isArray(result.data.keys) || result.data.key)) {
+    rawKeysList = Array.isArray(result.data.keys) ? result.data.keys : [result.data.key];
+  }
+
+  const generatedKeys = [];
+  for (const item of rawKeysList) {
+    let kStr = '';
+    if (typeof item === 'string') {
+      kStr = item.trim();
+    } else if (typeof item === 'object' && item !== null) {
+      kStr = String(item.key || item.code || item.license || item.chave || '').trim();
+    } else if (item) {
+      kStr = String(item).trim();
+    }
+    if (kStr.length > 0) {
+      generatedKeys.push(kStr);
+    }
   }
 
   if (generatedKeys.length === 0) {
