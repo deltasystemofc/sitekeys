@@ -255,7 +255,8 @@ function getAppBadgeHtml(appId, appName) {
     1: { cls: 'badge-app-1', icon: 'fa-brands fa-android', label: 'Proxy Android' },
     2: { cls: 'badge-app-2', icon: 'fa-solid fa-crosshairs', label: 'FFH4X' },
     3: { cls: 'badge-app-3', icon: 'fa-solid fa-shield-halved', label: 'Proxy Menu' },
-    4: { cls: 'badge-app-4', icon: 'fa-brands fa-apple', label: 'HS iOS' }
+    4: { cls: 'badge-app-4', icon: 'fa-brands fa-apple', label: 'HS iOS' },
+    5: { cls: 'badge-app-5', icon: 'fa-solid fa-mobile-screen', label: 'Remote iOS' }
   };
   const app = appMap[appId] || { cls: 'badge-app-1', icon: 'fa-solid fa-cube', label: appName || 'App' };
   return `<span class="app-badge ${app.cls}"><i class="${app.icon}"></i> ${app.label}</span>`;
@@ -355,7 +356,12 @@ function createKeyCardHtml(k) {
 
   const uidStr = k.deviceInfo?.uid || 'Aguardando login';
   const ipStr = k.deviceInfo?.ip || 'Não registrado';
-  const deviceStr = k.deviceInfo?.device || 'Nenhum';
+  let deviceStr = k.deviceInfo?.device || 'Nenhum';
+  if (k.deviceInfo?.maxDevices > 1 || k.appId === 5) {
+    const conn = k.deviceInfo?.connectedDevices ?? (k.deviceInfo?.uid ? 1 : 0);
+    const maxD = k.deviceInfo?.maxDevices || 4;
+    deviceStr = `${deviceStr !== 'Nenhum' ? deviceStr + ' ' : ''}(${conn}/${maxD} conexões)`;
+  }
 
   return `
     <div class="key-card status-${k.status}" id="card-${k.key}">
@@ -431,7 +437,12 @@ function createKeyTableRowHtml(k) {
     }
   }
 
-  const devInfo = k.deviceInfo?.device || k.deviceInfo?.uid || 'Aguardando';
+  let devInfo = k.deviceInfo?.device || k.deviceInfo?.uid || 'Aguardando';
+  if (k.deviceInfo?.maxDevices > 1 || k.appId === 5) {
+    const conn = k.deviceInfo?.connectedDevices ?? (k.deviceInfo?.uid ? 1 : 0);
+    const maxD = k.deviceInfo?.maxDevices || 4;
+    devInfo += ` (${conn}/${maxD})`;
+  }
 
   return `
     <tr>
@@ -464,29 +475,56 @@ function createKeyTableRowHtml(k) {
 // ================= REAL-TIME TIMER TICKER =================
 function updateCountdowns() {
   const now = Date.now();
-  const activeElements = document.querySelectorAll('.card-timer-wrap[data-expires]');
 
+  // 1. Atualização precisa para todas as chaves ativas do estado (cartões e tabela)
+  if (state.keys && Array.isArray(state.keys)) {
+    state.keys.forEach(k => {
+      if (k.status !== 'active' || !k.customExpiresAt) return;
+
+      const expireTime = new Date(k.customExpiresAt).getTime();
+      const remainingMs = expireTime - now;
+      const totalMinutes = parseFloat(k.customDuration?.totalMinutes) || 60;
+
+      const countdownEl = document.getElementById(`countdown-${k.key}`);
+      const progressEl = document.getElementById(`progress-${k.key}`);
+      const tableCountdownEl = document.getElementById(`countdown-tbl-${k.key}`);
+
+      if (remainingMs <= 0) {
+        if (countdownEl) countdownEl.textContent = 'Expirada';
+        if (progressEl) progressEl.style.width = '0%';
+        if (tableCountdownEl) tableCountdownEl.textContent = '🔴 Expirada';
+      } else {
+        const formatted = formatRemainingTime(remainingMs);
+        if (countdownEl) countdownEl.textContent = formatted;
+        if (tableCountdownEl) tableCountdownEl.textContent = `🟢 ${formatted}`;
+
+        const totalMs = totalMinutes * 60 * 1000;
+        const pct = Math.max(0, Math.min(100, (remainingMs / totalMs) * 100));
+        if (progressEl) progressEl.style.width = `${pct}%`;
+      }
+    });
+  }
+
+  // 2. Suporte direto aos elementos do DOM com atributo data-expires
+  const activeElements = document.querySelectorAll('.card-timer-wrap[data-expires]');
   activeElements.forEach(el => {
     const expiresStr = el.getAttribute('data-expires');
     const totalMinutes = parseFloat(el.getAttribute('data-total-min')) || 60;
     const key = el.getAttribute('data-key');
-    if (!expiresStr) return;
+    if (!expiresStr || !key) return;
 
     const expireTime = new Date(expiresStr).getTime();
     const remainingMs = expireTime - now;
 
     const countdownEl = document.getElementById(`countdown-${key}`);
     const progressEl = document.getElementById(`progress-${key}`);
-    const tableCountdownEl = document.getElementById(`countdown-tbl-${key}`);
 
     if (remainingMs <= 0) {
       if (countdownEl) countdownEl.textContent = 'Expirada';
       if (progressEl) progressEl.style.width = '0%';
-      if (tableCountdownEl) tableCountdownEl.textContent = '🔴 Expirada';
     } else {
       const formatted = formatRemainingTime(remainingMs);
       if (countdownEl) countdownEl.textContent = formatted;
-      if (tableCountdownEl) tableCountdownEl.textContent = `🟢 ${formatted}`;
 
       const totalMs = totalMinutes * 60 * 1000;
       const pct = Math.max(0, Math.min(100, (remainingMs / totalMs) * 100));
@@ -627,9 +665,35 @@ async function openKeyDetails(keyString) {
 }
 
 // ================= TIER PREVIEW CALCULATION =================
-function calculateClientTier(customValue, customUnit) {
+function calculateClientTier(customValue, customUnit, appId = 1) {
   const val = parseInt(customValue, 10) || 1;
   const totalHours = customUnit === 'hour' ? val : val * 24;
+  const numericAppId = parseInt(appId, 10) || 1;
+
+  if (numericAppId === 5) {
+    // Remote iOS tem tiers oficiais específicos de 3h, 1d e 7d na API Nexus
+    if (totalHours <= 3) {
+      return {
+        tierDescription: '3 Horas (Plano oficial Remote iOS - 1 Crédito)',
+        explanation: `Duração personalizada de ${customUnit === 'hour' ? `${val} hora(s)` : `${val} dia(s)`}. Será gerada uma chave de 3 Horas na API Nexus e o cronômetro iniciará no 1º login.`
+      };
+    } else if (totalHours <= 24) {
+      return {
+        tierDescription: '1 Dia (Plano oficial Remote iOS - 2 Créditos)',
+        explanation: `Duração personalizada de ${customUnit === 'hour' ? `${val} hora(s)` : `${val} dia(s)`}. Será gerada uma chave de 1 Dia na API Nexus e o cronômetro iniciará no 1º login.`
+      };
+    } else if (totalHours <= 24 * 7) {
+      return {
+        tierDescription: '7 Dias (Plano oficial Remote iOS - 6 Créditos)',
+        explanation: `Duração personalizada de ${val} dias (${totalHours}h). Será gerada uma chave de 7 Dias na API Nexus e expirará em ${val} dias após o 1º login.`
+      };
+    }
+    return {
+      tierDescription: 'Limite do Remote iOS Excedido',
+      explanation: 'O Remote iOS suporta planos de no máximo 7 dias na API Nexus.'
+    };
+  }
+
   if (totalHours <= 24) {
     return {
       tierDescription: '1 Dia (Mínimo da API para durações de horas)',
@@ -659,13 +723,16 @@ function updateTierPreview() {
   const valInput = document.getElementById('genCustomValue');
   let val = parseInt(valInput?.value, 10) || 1;
 
+  const selectedAppRadio = document.querySelector('input[name="appId"]:checked');
+  const appId = selectedAppRadio ? parseInt(selectedAppRadio.value, 10) : 1;
+
   if (isHour && val > 720) val = 720;
   if (!isHour && val > 30) val = 30;
 
   const previewBox = document.getElementById('tierPreviewText');
   if (!previewBox) return;
 
-  const clientTier = calculateClientTier(val, unit);
+  const clientTier = calculateClientTier(val, unit, appId);
   previewBox.innerHTML = `
     <div><strong>🎯 Plano Gerado na API:</strong> <span class="text-cyan font-bold">${clientTier.tierDescription}</span></div>
     <div style="margin-top: 0.35rem; color: #cbd5e1;">${clientTier.explanation}</div>
@@ -920,6 +987,13 @@ document.addEventListener('DOMContentLoaded', () => {
     genValue.max = 30;
     helpText.textContent = 'Duração personalizada em dias (máximo permitido: 30 dias).';
     updateTierPreview();
+  });
+
+  // Atualiza prévia de tier ao trocar o produto / App
+  document.querySelectorAll('input[name="appId"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      updateTierPreview();
+    });
   });
 
   // Presets click handlers
@@ -1293,8 +1367,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadKeys();
   });
 
-  document.getElementById('btnRefresh').addEventListener('click', () => {
-    showToast('Atualizando dados...', 'info', 1000);
+  document.getElementById('btnRefresh').addEventListener('click', async () => {
+    showToast('Consultando status em tempo real de todas as chaves...', 'info', 2000);
+    try {
+      await apiFetch('/api/keys/sync-check', { method: 'POST' });
+    } catch (e) {}
     loadKeys();
   });
 

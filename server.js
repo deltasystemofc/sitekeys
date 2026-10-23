@@ -152,11 +152,21 @@ app.get('/api/keys', (req, res) => {
 // Pré-visualização do cálculo de Tier
 app.post('/api/keys/preview-tier', (req, res) => {
   try {
-    const { durationValue, durationUnit } = req.body;
-    const tier = apiService.calculateApiTier(durationValue, durationUnit);
+    const { durationValue, durationUnit, appId } = req.body;
+    const tier = apiService.calculateApiTier(durationValue, durationUnit, appId || 1);
     res.json({ success: true, tier });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Forçar verificação ao vivo imediata de todas as chaves pendentes
+app.post('/api/keys/sync-check', async (req, res) => {
+  try {
+    await keyWatcher.checkKeys(true);
+    res.json({ success: true, message: 'Varredura de chaves concluída com sucesso.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -273,7 +283,7 @@ app.post('/api/keys/import', async (req, res) => {
     const unit = customUnit || 'hour';
     const targetAppId = parseInt(appId, 10) || 1;
 
-    const tier = apiService.calculateApiTier(val, unit);
+    const tier = apiService.calculateApiTier(val, unit, targetAppId);
     const now = Date.now();
 
     const importedKeys = [];
@@ -301,6 +311,18 @@ app.post('/api/keys/import', async (req, res) => {
 
         const detectedAppId = parseInt(targetAppId || info.app_id || 1, 10);
 
+        const realUid = (info.uid && !String(info.uid).includes('Nenhum') && String(info.uid).trim() !== '-')
+          ? info.uid
+          : (Array.isArray(info.uids_list) && info.uids_list[0] ? info.uids_list[0] : null);
+
+        const realIp = (info.ip && !String(info.ip).includes('Nenhum') && String(info.ip).trim() !== '-')
+          ? info.ip
+          : (Array.isArray(info.ips_list) && info.ips_list[0] ? info.ips_list[0] : null);
+
+        const realDevice = (info.device_info && !String(info.device_info).includes('Aguardando') && String(info.device_info).trim() !== '-')
+          ? info.device_info
+          : (Array.isArray(info.device_infos_list) && info.device_infos_list[0] ? info.device_infos_list[0] : null);
+
         const keyRecord = {
           key: keyClean,
           appId: detectedAppId,
@@ -322,9 +344,12 @@ app.post('/api/keys/import', async (req, res) => {
           apiCreatedAt: info.created_at || new Date().toISOString(),
           apiExpiresAt: info.expires_at || null,
           deviceInfo: {
-            uid: info.uid && !String(info.uid).includes('Nenhum') ? info.uid : null,
-            ip: info.ip && !String(info.ip).includes('Nenhum') ? info.ip : null,
-            device: info.device_info && !String(info.device_info).includes('Aguardando') ? info.device_info : null
+            uid: realUid,
+            ip: realIp,
+            device: realDevice,
+            connectedDevices: info.connected_devices || (info.devices ? info.devices.length : (realUid ? 1 : 0)),
+            maxDevices: info.max_devices || (detectedAppId === 5 ? 4 : 1),
+            devices: info.devices || null
           },
           resetsUsed: 0,
           lastPolledAt: new Date().toISOString(),
@@ -368,8 +393,62 @@ app.post('/api/keys/import', async (req, res) => {
 app.get('/api/keys/:key/info', async (req, res) => {
   try {
     const keyParam = req.params.key;
-    const local = db.getKey(keyParam);
+    let local = db.getKey(keyParam);
     const apiData = await apiService.getKeyInfo(keyParam);
+
+    // Se a chave estava pendente mas a API Delta mostra que já está sendo usada, ativa na hora
+    if (local && local.status === 'pending' && apiData && apiData.status === 'success' && apiData.exists) {
+      if (keyWatcher.isKeyActivated(apiData)) {
+        const totalMinutes = local.customDuration?.totalMinutes || 60;
+        const now = Date.now();
+        const customExpiresAt = new Date(now + totalMinutes * 60 * 1000).toISOString();
+
+        const realUid = (apiData.uid && !String(apiData.uid).includes('Nenhum') && String(apiData.uid).trim() !== '-')
+          ? apiData.uid
+          : (Array.isArray(apiData.uids_list) && apiData.uids_list[0] ? apiData.uids_list[0] : null);
+
+        const realIp = (apiData.ip && !String(apiData.ip).includes('Nenhum') && String(apiData.ip).trim() !== '-')
+          ? apiData.ip
+          : (Array.isArray(apiData.ips_list) && apiData.ips_list[0] ? apiData.ips_list[0] : null);
+
+        const realDevice = (apiData.device_info && !String(apiData.device_info).includes('Aguardando') && String(apiData.device_info).trim() !== '-')
+          ? apiData.device_info
+          : (Array.isArray(apiData.device_infos_list) && apiData.device_infos_list[0] ? apiData.device_infos_list[0] : null);
+
+        const updates = {
+          status: 'active',
+          firstUsedAt: new Date().toISOString(),
+          customExpiresAt,
+          apiExpiresAt: apiData.expires_at,
+          deviceInfo: {
+            uid: realUid,
+            ip: realIp,
+            device: realDevice,
+            connectedDevices: apiData.connected_devices || (apiData.devices ? apiData.devices.length : (realUid ? 1 : 0)),
+            maxDevices: apiData.max_devices || (local.appId === 5 ? 4 : 1),
+            devices: apiData.devices || null
+          },
+          lastPolledAt: new Date().toISOString()
+        };
+
+        local = db.updateKey(keyParam, updates);
+
+        db.addLog('KEY_FIRST_LOGIN_DETECTED', {
+          key: keyParam,
+          appName: local.appName,
+          uid: updates.deviceInfo.uid,
+          ip: updates.deviceInfo.ip,
+          device: updates.deviceInfo.device,
+          connectedDevices: updates.deviceInfo.connectedDevices,
+          customExpiresAt
+        });
+
+        keyWatcher.broadcast('key_activated', {
+          key: local,
+          message: `Chave ${keyParam} iniciou uso! Cronômetro iniciado.`
+        });
+      }
+    }
 
     res.json({
       success: true,

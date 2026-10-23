@@ -11,16 +11,18 @@ const APP_INFO = {
   1: { id: 1, name: 'Proxy Android', icon: 'android', badgeColor: '#3ddc84' },
   2: { id: 2, name: 'FFH4X Android', icon: 'gamepad', badgeColor: '#ff9800' },
   3: { id: 3, name: 'Proxy Menu / MDK API', icon: 'shield', badgeColor: '#00e5ff' },
-  4: { id: 4, name: 'HS iOS External / Ruanwq API', icon: 'apple', badgeColor: '#a855f7' }
+  4: { id: 4, name: 'HS iOS External / Ruanwq API', icon: 'apple', badgeColor: '#a855f7' },
+  5: { id: 5, name: 'Remote iOS', icon: 'mobile-screen', badgeColor: '#f43f5e' }
 };
 
 /**
  * Calcula o menor tier oficial necessário na API para cobrir o tempo personalizado solicitado
  * @param {number} customValue - Valor numérico (ex: 2, 5, 15)
  * @param {string} customUnit - 'hour' ou 'day'
- * @returns {{ apiDuration: number, apiUnit: string, totalMinutes: number, explanation: string }}
+ * @param {number} [appId=1] - ID do produto (1: Proxy Android, 2: FFH4X, 3: Proxy Menu, 4: HS iOS, 5: Remote iOS)
+ * @returns {{ apiDuration: number, apiUnit: string, totalMinutes: number, customHours: number, tierDescription: string, explanation: string }}
  */
-function calculateApiTier(customValue, customUnit) {
+function calculateApiTier(customValue, customUnit, appId = 1) {
   const value = parseInt(customValue, 10);
   if (isNaN(value) || value <= 0) {
     throw new Error('Duração inválida informada.');
@@ -41,7 +43,44 @@ function calculateApiTier(customValue, customUnit) {
     throw new Error('Unidade de tempo inválida. Use "hour" ou "day".');
   }
 
-  // Lógica de mapeamento para o menor tier da API
+  const numericAppId = parseInt(appId, 10) || 1;
+
+  // Lógica especial para Remote iOS (app_id = 5)
+  // A API Nexus aceita estritamente: 3 horas (1 crédito), 1 dia (2 créditos) ou 7 dias (6 créditos)
+  if (numericAppId === 5) {
+    if (totalHours <= 3) {
+      return {
+        apiDuration: 3,
+        apiUnit: 'hour',
+        totalMinutes: totalHours * 60,
+        customHours: totalHours,
+        tierDescription: '3 Horas (Plano oficial Remote iOS - 1 Crédito)',
+        explanation: `Duração personalizada de ${customUnit === 'hour' ? `${value} hora(s)` : `${value} dia(s)`}. Será gerada uma chave de 3 Horas na API Nexus e o cronômetro iniciará no 1º login.`
+      };
+    } else if (totalHours <= 24) {
+      return {
+        apiDuration: 1,
+        apiUnit: 'day',
+        totalMinutes: totalHours * 60,
+        customHours: totalHours,
+        tierDescription: '1 Dia (Plano oficial Remote iOS - 2 Créditos)',
+        explanation: `Duração personalizada de ${customUnit === 'hour' ? `${value} hora(s)` : `${value} dia(s)`}. Será gerada uma chave de 1 Dia na API Nexus e o cronômetro iniciará no 1º login.`
+      };
+    } else if (totalHours <= 24 * 7) {
+      return {
+        apiDuration: 7,
+        apiUnit: 'day',
+        totalMinutes: totalHours * 60,
+        customHours: totalHours,
+        tierDescription: '7 Dias (Plano oficial Remote iOS - 6 Créditos)',
+        explanation: `Duração personalizada de ${value} dias (${totalHours}h). Será gerada uma chave de 7 Dias na API Nexus e expirará em ${value} dias após o 1º login.`
+      };
+    } else {
+      throw new Error('O Remote iOS suporta planos de no máximo 7 dias na API Nexus.');
+    }
+  }
+
+  // Demais produtos (Proxy Android, FFH4X, Proxy Menu, HS iOS External)
   if (totalHours <= 24) {
     // Horas personalizadas (ex: 1h, 2h, 12h, 24h) -> Gera 1 Dia na API
     return {
@@ -125,12 +164,13 @@ async function createKey({ appId = 1, customValue = 1, customUnit = 'hour', quan
     throw new Error('Token da API não configurado.');
   }
 
-  const tier = calculateApiTier(customValue, customUnit);
+  const targetAppId = parseInt(appId, 10) || 1;
+  const tier = calculateApiTier(customValue, customUnit, targetAppId);
   const qty = Math.max(1, Math.min(parseInt(quantity, 10) || 1, 20));
 
   const params = {
     token,
-    app_id: appId,
+    app_id: targetAppId,
     duration: tier.apiDuration,
     unit: tier.apiUnit,
     quantity: qty

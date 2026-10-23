@@ -147,44 +147,78 @@ class KeyWatcher {
       return false;
     }
 
-    const expiresAt = String(info.expires_at || '').toLowerCase();
-    const uid = String(info.uid || '').toLowerCase();
-    const ip = String(info.ip || '').toLowerCase();
-    const deviceInfo = String(info.device_info || '').toLowerCase();
+    const expiresAt = String(info.expires_at || '').trim();
+    const expiresAtLower = expiresAt.toLowerCase();
 
-    // Condições que indicam NÃO ativado
-    const isNotActivatedText = 
-      expiresAt.includes('não ativada') ||
-      expiresAt.includes('pendente') ||
-      expiresAt === '' ||
-      expiresAt === 'null';
+    // 1. Checagem direta de expiração ativa:
+    // Se a expiração contiver uma data no formato AAAA-MM-DD (ex: "2026-10-24 15:30:00")
+    // e NÃO for mensagem padrão de chave pendente
+    const isPendingText = 
+      expiresAtLower.includes('não ativada') ||
+      expiresAtLower.includes('nao ativada') ||
+      expiresAtLower.includes('no ativada') ||
+      expiresAtLower.includes('pendente') ||
+      expiresAtLower.includes('aguardando') ||
+      expiresAtLower.includes('not activated') ||
+      expiresAtLower === 'null' ||
+      expiresAtLower === '';
 
-    const hasNoDevice = 
-      uid.includes('nenhum dispositivo') || 
-      uid === '' || 
-      uid === 'null' ||
-      uid.includes('aguardando');
+    const hasValidDate = /\d{4}[-/.]\d{2}[-/.]\d{2}/.test(expiresAt) && !isPendingText;
+    if (hasValidDate) {
+      return true;
+    }
 
-    const hasNoIp = 
-      ip.includes('nenhum login') || 
-      ip === '' || 
-      ip === 'null';
+    // 2. Checagem de dispositivos conectados (essencial para Remote iOS / app_id 5)
+    const connectedDevices = parseInt(info.connected_devices, 10) || 0;
+    if (connectedDevices > 0) {
+      return true;
+    }
+    if (Array.isArray(info.devices) && info.devices.length > 0) {
+      return true;
+    }
+    if (Array.isArray(info.uids_list) && info.uids_list.some(u => u && String(u).trim() !== '' && String(u).trim() !== '-')) {
+      return true;
+    }
+    if (Array.isArray(info.ips_list) && info.ips_list.some(ip => ip && String(ip).trim() !== '' && String(ip).trim() !== '-')) {
+      return true;
+    }
 
-    const hasNoDeviceInfo = 
-      deviceInfo.includes('aguardando') || 
-      deviceInfo === '' || 
-      deviceInfo === 'null';
+    // 3. Checagem de UID real (não nulo / não placeholder)
+    const rawUid = String(info.uid || '').trim();
+    const uidLower = rawUid.toLowerCase();
+    const hasRealUid = rawUid.length > 2 && 
+      rawUid !== '-' && 
+      uidLower !== 'null' && 
+      !uidLower.includes('nenhum') && 
+      !uidLower.includes('aguardando') && 
+      !uidLower.includes('pendente');
 
-    // Se possui UID ou IP ou dispositivo real, OU a expiração tem data válida
-    const hasRealDevice = !hasNoDevice && uid.length > 3;
-    const hasRealIp = !hasNoIp && ip.length > 5;
-    const hasRealDeviceInfo = !hasNoDeviceInfo && deviceInfo.length > 2;
-    const hasActiveExpiration = !isNotActivatedText && expiresAt.length > 8;
+    // 4. Checagem de IP real
+    const rawIp = String(info.ip || '').trim();
+    const ipLower = rawIp.toLowerCase();
+    const hasRealIp = rawIp.length > 5 && 
+      rawIp !== '-' && 
+      ipLower !== 'null' && 
+      !ipLower.includes('nenhum') && 
+      !ipLower.includes('login') && 
+      !ipLower.includes('aguardando');
 
-    return hasRealDevice || hasRealIp || hasRealDeviceInfo || hasActiveExpiration;
+    // 5. Checagem de Aparelho / Device Info
+    const rawDevice = String(info.device_info || '').trim();
+    const deviceLower = rawDevice.toLowerCase();
+    const hasRealDevice = rawDevice.length > 2 && 
+      rawDevice !== '-' && 
+      deviceLower !== 'null' && 
+      !deviceLower.includes('aguardando') && 
+      !deviceLower.includes('nenhum');
+
+    // 6. Flags de produtos externos (MDK HWID bound / KeyAuth)
+    const hasHwidBound = info.mdk_hwid_bound === true || info.hwid_bound === true;
+
+    return hasRealUid || hasRealIp || hasRealDevice || hasHwidBound;
   }
 
-  async checkKeys() {
+  async checkKeys(forceAll = false) {
     if (this.isPolling) return;
     this.isPolling = true;
 
@@ -207,8 +241,8 @@ class KeyWatcher {
 
         // Se a chave está pendente, consulta a API para ver se o cliente logou
         if (keyRecord.status === 'pending') {
-          // Não consulta a mesma chave pendente mais de 1 vez a cada 15 segundos
-          if (keyRecord.lastPolledAt) {
+          // Não consulta a mesma chave pendente mais de 1 vez a cada 15 segundos a menos que forceAll seja true
+          if (!forceAll && keyRecord.lastPolledAt) {
             const timeSincePoll = now - new Date(keyRecord.lastPolledAt).getTime();
             if (timeSincePoll < 15000) continue;
           }
@@ -226,15 +260,31 @@ class KeyWatcher {
                 const totalMinutes = keyRecord.customDuration?.totalMinutes || 60;
                 const customExpiresAt = new Date(now + totalMinutes * 60 * 1000).toISOString();
 
+                // Extrai identificadores reais de dispositivo (suporta também múltiplos dispositivos como Remote iOS)
+                const realUid = (info.uid && !String(info.uid).includes('Nenhum') && String(info.uid).trim() !== '-')
+                  ? info.uid
+                  : (Array.isArray(info.uids_list) && info.uids_list[0] ? info.uids_list[0] : null);
+
+                const realIp = (info.ip && !String(info.ip).includes('Nenhum') && String(info.ip).trim() !== '-')
+                  ? info.ip
+                  : (Array.isArray(info.ips_list) && info.ips_list[0] ? info.ips_list[0] : null);
+
+                const realDevice = (info.device_info && !String(info.device_info).includes('Aguardando') && String(info.device_info).trim() !== '-')
+                  ? info.device_info
+                  : (Array.isArray(info.device_infos_list) && info.device_infos_list[0] ? info.device_infos_list[0] : null);
+
                 const updates = {
                   status: 'active',
                   firstUsedAt,
                   customExpiresAt,
                   apiExpiresAt: info.expires_at,
                   deviceInfo: {
-                    uid: info.uid && !String(info.uid).includes('Nenhum') ? info.uid : null,
-                    ip: info.ip && !String(info.ip).includes('Nenhum') ? info.ip : null,
-                    device: info.device_info && !String(info.device_info).includes('Aguardando') ? info.device_info : null
+                    uid: realUid,
+                    ip: realIp,
+                    device: realDevice,
+                    connectedDevices: info.connected_devices || (info.devices ? info.devices.length : (realUid ? 1 : 0)),
+                    maxDevices: info.max_devices || (keyRecord.appId === 5 ? 4 : 1),
+                    devices: info.devices || null
                   },
                   lastPolledAt: new Date().toISOString()
                 };
@@ -247,6 +297,7 @@ class KeyWatcher {
                   uid: updates.deviceInfo.uid,
                   ip: updates.deviceInfo.ip,
                   device: updates.deviceInfo.device,
+                  connectedDevices: updates.deviceInfo.connectedDevices,
                   customExpiresAt
                 });
 

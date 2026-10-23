@@ -590,6 +590,7 @@ body.dark-theme {
 .badge-app-2 { background: rgba(255, 152, 0, 0.15); color: #ff9800; border: 1px solid rgba(255, 152, 0, 0.3); }
 .badge-app-3 { background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3); }
 .badge-app-4 { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.badge-app-5 { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.35); }
 
 .status-badge {
   display: inline-flex;
@@ -963,6 +964,7 @@ body.dark-theme {
 .icon-game { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
 .icon-shield { background: rgba(0, 229, 255, 0.2); color: #00e5ff; }
 .icon-apple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+.icon-remote { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
 
 .app-details {
   display: flex;
